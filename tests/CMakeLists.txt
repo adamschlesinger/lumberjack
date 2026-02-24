@@ -59,6 +59,10 @@ add_test(NAME BackendLifecycle COMMAND test_backend_lifecycle)
 add_test(NAME PrettyBackendAPI COMMAND test_pretty_backend_api)
 add_test(NAME PrettyColorCoding COMMAND test_pretty_color_coding)
 
+add_executable(test_pretty_message_format test_pretty_message_format.cpp)
+target_link_libraries(test_pretty_message_format PRIVATE lumberjack::lumberjack rapidcheck)
+add_test(NAME PrettyMessageFormat COMMAND test_pretty_message_format)
+
 # Performance benchmark (not a test, run manually)
 add_executable(perf_branching_comparison perf_branching_comparison.cpp)
 target_link_libraries(perf_branching_comparison PRIVATE lumberjack::lumberjack)

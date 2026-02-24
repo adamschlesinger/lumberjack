@@ -40,7 +40,7 @@ This plan implements the pretty backend for lumberjack in incremental steps, sta
     - **Property 2: Color Reset After Output**
     - **Validates: Requirements 1.5**
   
-  - [ ]* 2.4 Write property test for message format
+  - [x] 2.4 Write property test for message format
     - **Property 10: Log Message Format**
     - **Validates: Requirements 8.1, 8.4**
 

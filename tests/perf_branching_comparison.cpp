@@ -185,14 +185,14 @@ int main() {
 
     // Lumberjack: unbuffered (original behavior)
     lumberjack::builtin_set_buffered(false);
-    lumberjack::builtin_set_timestamp_cache_ms(0);
+    lumberjack::builtin_set_timestamp_cache(0);
     auto lj_unbuf = benchmark("Lumberjack unbuffered", [&]() {
         LOG_INFO("Info: %d %s", 42, "test");
     }, N);
 
     // Lumberjack: buffered + cached timestamp
     lumberjack::builtin_set_buffered(true, 8192);
-    lumberjack::builtin_set_timestamp_cache_ms(10);
+    lumberjack::builtin_set_timestamp_cache(10);
     auto lj_buf_cache = benchmark("Lumberjack buf+cache", [&]() {
         LOG_INFO("Info: %d %s", 42, "test");
     }, N);
@@ -210,7 +210,7 @@ int main() {
     // =================================================================
     printf("--- Test 4: Tight Loop (100 Disabled Calls) ---\n");
     lumberjack::builtin_set_buffered(false);
-    lumberjack::builtin_set_timestamp_cache_ms(0);
+    lumberjack::builtin_set_timestamp_cache(0);
     lumberjack::set_level(lumberjack::LOG_LEVEL_INFO);
     naive.set_level(NaiveLogger::INFO);
 
@@ -246,7 +246,7 @@ int main() {
 
     // Lumberjack: unbuffered
     lumberjack::builtin_set_buffered(false);
-    lumberjack::builtin_set_timestamp_cache_ms(0);
+    lumberjack::builtin_set_timestamp_cache(0);
     auto loop_lj_unbuf = benchmark("Lumberjack unbuf (100 en)", [&]() {
         for (int i = 0; i < 100; ++i)
             LOG_INFO("Info: %d", i);
@@ -254,7 +254,7 @@ int main() {
 
     // Lumberjack: buffered + cached timestamp
     lumberjack::builtin_set_buffered(true, 16384);
-    lumberjack::builtin_set_timestamp_cache_ms(10);
+    lumberjack::builtin_set_timestamp_cache(10);
     auto loop_lj_full = benchmark("Lumberjack buf+cache (100 en)", [&]() {
         for (int i = 0; i < 100; ++i)
             LOG_INFO("Info: %d", i);
@@ -284,7 +284,7 @@ int main() {
 
     // Lumberjack: unbuffered
     lumberjack::builtin_set_buffered(false);
-    lumberjack::builtin_set_timestamp_cache_ms(0);
+    lumberjack::builtin_set_timestamp_cache(0);
     auto mix_lj = benchmark("Lumberjack unbuffered (mixed)", [&]() {
         LOG_ERROR("Error: %d", 1);
         LOG_WARN("Warn: %d", 2);
@@ -295,7 +295,7 @@ int main() {
 
     // Lumberjack: optimized
     lumberjack::builtin_set_buffered(true, 8192);
-    lumberjack::builtin_set_timestamp_cache_ms(10);
+    lumberjack::builtin_set_timestamp_cache(10);
     auto mix_lj_opt = benchmark("Lumberjack buf+cache (mixed)", [&]() {
         LOG_ERROR("Error: %d", 1);
         LOG_WARN("Warn: %d", 2);
@@ -313,12 +313,41 @@ int main() {
     printf("\n");
 
     // =================================================================
-    // TEST 7: Enabled spans
+    // TEST 7: Sequence Number Overhead
     // =================================================================
-    printf("--- Test 7: Enabled Span Overhead ---\n");
+    printf("--- Test 7: Sequence Number Overhead (buf+cache, 100 enabled) ---\n");
+    lumberjack::set_level(lumberjack::LOG_LEVEL_INFO);
+    lumberjack::builtin_set_buffered(true, 16384);
+    lumberjack::builtin_set_timestamp_cache(10);
+
+    lumberjack::builtin_set_timestamp_cache(10, false);
+    auto seq_off = benchmark("buf+cache (seq OFF, 100 en)", [&]() {
+        for (int i = 0; i < 100; ++i)
+            LOG_INFO("Info: %d", i);
+    }, N / 100);
+    lumberjack::builtin_flush();
+
+    lumberjack::builtin_set_timestamp_cache(10, true);
+    auto seq_on = benchmark("buf+cache (seq ON, 100 en)", [&]() {
+        for (int i = 0; i < 100; ++i)
+            LOG_INFO("Info: %d", i);
+    }, N / 100);
+    lumberjack::builtin_flush();
+    lumberjack::builtin_set_timestamp_cache(10, false);
+
+    print_result(seq_off);
+    print_result(seq_on);
+    print_comparison(seq_off, seq_on);
+    printf("    -> Per-call overhead: %.1f ns\n\n",
+           (seq_on.mean_ns - seq_off.mean_ns) / 100.0);
+
+    // =================================================================
+    // TEST 8: Enabled spans
+    // =================================================================
+    printf("--- Test 8: Enabled Span Overhead ---\n");
     lumberjack::set_level(lumberjack::LOG_LEVEL_DEBUG);
     lumberjack::builtin_set_buffered(true, 16384);
-    lumberjack::builtin_set_timestamp_cache_ms(10);
+    lumberjack::builtin_set_timestamp_cache(10);
 
     auto span_en = benchmark("Lumberjack Span (enabled, buf+cache)", [&]() {
         LOG_SPAN(lumberjack::LOG_LEVEL_DEBUG, "bench_span");
@@ -338,6 +367,7 @@ int main() {
     printf("  Disabled spans: Clock noop eliminates steady_clock reads\n");
     printf("  Buffered mode:  Eliminates per-call fflush (biggest win)\n");
     printf("  Cached TS:      Amortizes localtime/strftime cost\n");
+    printf("  Seq numbers:    ~20 ns/call overhead when enabled\n");
     printf("  All optimizations stack and are runtime-switchable.\n");
 
     return 0;

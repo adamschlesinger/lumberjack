@@ -124,7 +124,12 @@ void builtin_flush();
 // localtime/strftime on every log line, the formatted timestamp is cached
 // and refreshed at most once per interval_ms milliseconds.
 // Set to 0 to disable caching (recompute every call).
-void builtin_set_timestamp_cache_ms(unsigned int interval_ms);
+//
+// When seq is true, each log line includes a monotonically increasing
+// counter that resets whenever the cached timestamp refreshes. This
+// restores ordering resolution lost by caching.
+// Output format becomes: [timestamp] [LEVEL] #N message
+void builtin_set_timestamp_cache(unsigned int interval_ms, bool seq = false);
 
 // ----------------------------------------------------------------------------
 // Function pointer types (public for macro / Span use)

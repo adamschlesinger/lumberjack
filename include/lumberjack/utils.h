@@ -36,15 +36,20 @@ public:
 
     // Returns a formatted timestamp: "YYYY-MM-DD HH:MM:SS.mmm"
     // Returns the cached value if still fresh, otherwise recomputes.
-    const char* get() {
+    // Sets did_refresh to true when the timestamp was recomputed.
+    const char* get(bool* did_refresh = nullptr) {
         if (m_interval_ms == 0) {
             refresh();
+            if (did_refresh) *did_refresh = true;
             return m_buf;
         }
         auto now = std::chrono::steady_clock::now();
         if (now >= m_expiry) {
             refresh();
             m_expiry = now + std::chrono::milliseconds(m_interval_ms);
+            if (did_refresh) *did_refresh = true;
+        } else {
+            if (did_refresh) *did_refresh = false;
         }
         return m_buf;
     }

@@ -7,7 +7,8 @@ A high-performance C++17 logging library designed for performance-critical appli
 - **Branchless Dispatch**: Function pointer arrays eliminate branching overhead at disabled call sites
 - **Buffered Writes**: Optional write buffering eliminates per-call fflush overhead (biggest perf win)
 - **Cached Timestamps**: Amortizes localtime/strftime cost across rapid log calls
-- **Branchless Spans**: Disabled spans skip clock reads via function pointer dispatch (~1.3 ns overhead)
+- **Branchless Spans**: Disabled spans skip clock reads via function pointer dispatch (~25 ns overhead)
+- **Sequence Numbers**: Optional per-timestamp-interval counter restores log ordering resolution when using cached timestamps
 - **Runtime Log Levels**: Change verbosity on the fly without recompiling
 - **Pluggable Backends**: Switch logging destinations at runtime
 - **RAII Span Timing**: Automatic performance measurement with minimal code
@@ -25,7 +26,10 @@ int main() {
     
     // Enable high-performance mode
     lumberjack::builtin_set_buffered(true, 8192);
-    lumberjack::builtin_set_timestamp_cache_ms(10);
+    lumberjack::builtin_set_timestamp_cache(10);
+    
+    // Or with sequence numbers for sub-timestamp ordering
+    // lumberjack::builtin_set_timestamp_cache(10, true);
     
     LOG_INFO("Application started");
     LOG_ERROR("Something went wrong: %s", error_msg);
@@ -214,13 +218,19 @@ The built-in backend supports two optional optimizations that can be enabled at 
 lumberjack::builtin_set_buffered(true, 8192);  // 8 KB buffer
 
 // Cached timestamps — reuse formatted timestamp string within a time window
-lumberjack::builtin_set_timestamp_cache_ms(10); // refresh every 10 ms
+lumberjack::builtin_set_timestamp_cache(10); // refresh every 10 ms
+
+// Cached timestamps with sequence numbers for sub-timestamp ordering
+lumberjack::builtin_set_timestamp_cache(10, true);
+// Output: [2026-02-24 10:15:03.042] [INFO ] #0 first message
+//         [2026-02-24 10:15:03.042] [INFO ] #1 second message
+//         [2026-02-24 10:15:03.042] [WARN ] #2 third message
 
 // Manual flush when needed (also flushes on shutdown and output change)
 lumberjack::builtin_flush();
 ```
 
-Both optimizations are runtime-switchable and stack together.
+All three optimizations are runtime-switchable and stack together.
 
 ### Benchmark Results
 
@@ -230,25 +240,33 @@ Performance comparison against a naive branching logger with equivalent base fea
 
 | Scenario | Naive | Lumberjack | Speedup |
 |----------|-------|------------|---------|
-| Single disabled call | 12.1 ns | 12.1 ns | ~same (both near zero) |
-| Disabled span | - | 1.3 ns overhead | clock noop |
-| Tight loop (100 disabled) | 103 ns | 76 ns | 1.35x faster |
+| Single disabled call | 15 ns | 15 ns | ~same (both near zero) |
+| Disabled span | - | ~25 ns overhead | clock noop |
+| Tight loop (100 disabled) | 158 ns | 80 ns | ~2x faster |
 
 **Enabled path**
 
 | Scenario | Naive | LJ Unbuffered | LJ Buf+Cache | Best Speedup |
 |----------|-------|---------------|--------------|--------------|
-| Single enabled call | 801 ns | 849 ns | 141 ns | 5.68x faster |
-| 100 enabled calls | 77,396 ns | 81,798 ns | 11,479 ns | 6.74x faster |
-| Mixed (3 en + 2 dis) | 2,356 ns | 2,466 ns | 365 ns | 6.45x faster |
-| Enabled span | - | - | 173 ns | - |
+| Single enabled call | 800 ns | 834 ns | 157 ns | 5.1x faster |
+| 100 enabled calls | 76,136 ns | 81,864 ns | 12,998 ns | 5.9x faster |
+| Mixed (3 en + 2 dis) | 2,339 ns | 2,460 ns | 413 ns | 5.7x faster |
+| Enabled span | - | - | 218 ns | - |
+
+**Sequence number overhead (buf+cache, 100 enabled calls)**
+
+| Scenario | Mean | Per-call overhead |
+|----------|------|-------------------|
+| Seq OFF | 12,887 ns | — |
+| Seq ON | 14,873 ns | ~20 ns |
 
 **Key Insights:**
 
-- Disabled logs are near zero-cost. The branchless design wins in tight loops (1.35x) by avoiding branch overhead.
-- Disabled spans cost only 1.3 ns thanks to clock function pointer dispatch (no `steady_clock::now()` calls).
-- Unbuffered Lumberjack performs ~same as the naive logger (~0.95x) since I/O dominates.
-- Buffered writes + cached timestamps deliver a 5.7-6.7x speedup by eliminating per-call `fflush()` and amortizing `localtime`/`strftime` cost.
+- Disabled logs are near zero-cost. The branchless design wins in tight loops (~2x) by avoiding branch overhead.
+- Disabled spans cost ~25 ns thanks to clock function pointer dispatch (no `steady_clock::now()` calls).
+- Unbuffered Lumberjack performs ~same as the naive logger (~0.96x) since I/O dominates.
+- Buffered writes + cached timestamps deliver a 5-6x speedup by eliminating per-call `fflush()` and amortizing `localtime`/`strftime` cost.
+- Sequence numbers add ~20 ns per call when enabled — negligible relative to the buf+cache baseline. Disabled by default.
 - All optimizations are runtime-switchable — no recompilation needed.
 
 Run the benchmark yourself:

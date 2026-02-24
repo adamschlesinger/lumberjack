@@ -12,6 +12,8 @@ static FILE*          g_output = stderr;
 static std::mutex     g_mutex;
 static TimestampCache g_tsCache;
 static WriteBuffer    g_writeBuf;
+static bool           g_seqEnabled = false;
+static unsigned long  g_seqCounter = 0;
 
 static const char* const g_levelStrings[LOG_COUNT] = {
     "NONE ", "ERROR", "WARN ", "INFO ", "DEBUG"
@@ -32,11 +34,20 @@ static void builtin_shutdown() {
 static void builtin_log_write(LogLevel level, const char* message) {
     std::lock_guard<std::mutex> lock(g_mutex);
 
-    const char* ts = g_tsCache.get();
+    bool refreshed = false;
+    const char* ts = g_tsCache.get(&refreshed);
     const char* level_str = g_levelStrings[level];
 
+    if (refreshed) g_seqCounter = 0;
+
     char line[1280];
-    int len = snprintf(line, sizeof(line), "[%s] [%s] %s\n", ts, level_str, message);
+    int len;
+    if (g_seqEnabled) {
+        len = snprintf(line, sizeof(line), "[%s] [%s] #%lu %s\n",
+                       ts, level_str, g_seqCounter++, message);
+    } else {
+        len = snprintf(line, sizeof(line), "[%s] [%s] %s\n", ts, level_str, message);
+    }
     if (len < 0) return;
     if (static_cast<size_t>(len) >= sizeof(line)) len = sizeof(line) - 1;
 
@@ -94,9 +105,11 @@ void builtin_flush() {
     g_writeBuf.flush(g_output);
 }
 
-void builtin_set_timestamp_cache_ms(unsigned int interval_ms) {
+void builtin_set_timestamp_cache(unsigned int interval_ms, bool seq) {
     std::lock_guard<std::mutex> lock(g_mutex);
     g_tsCache.set_interval_ms(interval_ms);
+    g_seqEnabled = seq;
+    g_seqCounter = 0;
 }
 
 } // namespace lumberjack

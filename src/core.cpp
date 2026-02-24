@@ -62,7 +62,18 @@ void init() {
 }
 
 void set_level(LogLevel level) {
-    // Will be implemented in task 4.2
+    g_currentLevel = level;
+    
+    // Update function pointer array based on level threshold
+    // For levels <= active level: point to log_dispatch
+    // For levels > active level: point to log_noop
+    for (int i = 0; i < LOG_COUNT; i++) {
+        if (i <= level) {
+            g_logFunctions[i] = log_dispatch;
+        } else {
+            g_logFunctions[i] = log_noop;
+        }
+    }
 }
 
 LogLevel get_level() {

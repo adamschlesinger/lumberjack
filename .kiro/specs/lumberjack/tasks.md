@@ -43,7 +43,7 @@ This implementation plan breaks down the lumberjack logging library into increme
     - Implement `level_to_string()` helper function
     - _Requirements: 1.1, 1.3, 5.2, 5.3, 8.5_
 
-  - [ ] 4.2 Implement `set_level()` function
+  - [x] 4.2 Implement `set_level()` function
     - Update `g_logFunctions` array based on level threshold
     - For levels <= active level: point to `log_dispatch`
     - For levels > active level: point to `log_noop`

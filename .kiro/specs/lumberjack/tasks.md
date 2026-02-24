@@ -144,28 +144,28 @@ This implementation plan breaks down the lumberjack logging library into increme
     - Test shutdown called before init on backend switch
     - Test init called before first log message
 
-- [ ] 11. Create example programs
-  - [ ] 11.1 Create `examples/basic.cpp`
+- [x] 11. Create example programs
+  - [x] 11.1 Create `examples/basic.cpp`
     - Demonstrate simple logging with all log levels
     - Show level changes at runtime
     - Include explanatory comments
     - _Requirements: 12.1, 12.4, 12.5_
 
-  - [ ] 11.2 Create `examples/spans.cpp`
+  - [x] 11.2 Create `examples/spans.cpp`
     - Demonstrate RAII span timing
     - Show nested spans
     - Show span level gating
     - Include explanatory comments
     - _Requirements: 12.2, 12.4, 12.5_
 
-  - [ ] 11.3 Create `examples/custom_backend.cpp`
+  - [x] 11.3 Create `examples/custom_backend.cpp`
     - Implement a simple custom backend (e.g., in-memory buffer)
     - Demonstrate backend registration and switching
     - Show backend lifecycle (init/shutdown)
     - Include explanatory comments
     - _Requirements: 12.3, 12.4, 12.5_
 
-  - [ ] 11.4 Add examples to CMake build
+  - [x] 11.4 Add examples to CMake build
     - Create `examples/CMakeLists.txt`
     - Conditionally build examples when `lumberjack_BUILD_EXAMPLES` is ON
     - Link examples against `lumberjack::lumberjack`

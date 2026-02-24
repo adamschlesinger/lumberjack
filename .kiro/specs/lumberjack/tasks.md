@@ -109,7 +109,7 @@ This implementation plan breaks down the lumberjack logging library into increme
     - Expand to: `lumberjack::Span _log_span_##__LINE__(level, name)`
     - _Requirements: 6.1, 10.5_
 
-  - [ ] 7.3 Implement span callbacks in built-in backend
+  - [x] 7.3 Implement span callbacks in built-in backend
     - `builtin_span_begin()`: return nullptr (no tracking needed)
     - `builtin_span_end()`: format and log span message with elapsed time
     - _Requirements: 4.5, 6.2, 6.3_

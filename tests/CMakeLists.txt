@@ -24,11 +24,15 @@ target_link_libraries(test_builtin_output PRIVATE lumberjack::lumberjack)
 add_executable(test_backend_message_delivery test_backend_message_delivery.cpp)
 target_link_libraries(test_backend_message_delivery PRIVATE lumberjack::lumberjack rapidcheck)
 
+add_executable(test_span_callbacks test_span_callbacks.cpp)
+target_link_libraries(test_span_callbacks PRIVATE lumberjack::lumberjack)
+
 enable_testing()
 add_test(NAME LogLevelOrdering COMMAND test_log_level_ordering)
 add_test(NAME LogLevelGating COMMAND test_log_level_gating)
 add_test(NAME BackendRoundtrip COMMAND test_backend_roundtrip)
 add_test(NAME BuiltinOutput COMMAND test_builtin_output)
 add_test(NAME BackendMessageDelivery COMMAND test_backend_message_delivery)
+add_test(NAME SpanCallbacks COMMAND test_span_callbacks)
 
 # Additional tests will be added in task 12

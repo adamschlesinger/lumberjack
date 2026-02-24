@@ -64,7 +64,7 @@ This implementation plan breaks down the lumberjack logging library into increme
     - **Property 1: Log Level Gating**
     - **Validates: Requirements 1.3, 1.4, 2.3, 2.4, 2.5, 2.6, 2.7**
 
-  - [ ]* 4.6 Write property test for backend round-trip consistency
+  - [x] 4.6 Write property test for backend round-trip consistency
     - **Property 2: Backend Round-Trip Consistency**
     - **Validates: Requirements 3.3, 3.6**
 

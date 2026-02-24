@@ -15,8 +15,12 @@ target_link_libraries(test_log_level_ordering PRIVATE lumberjack::lumberjack rap
 add_executable(test_log_level_gating test_log_level_gating.cpp)
 target_link_libraries(test_log_level_gating PRIVATE lumberjack::lumberjack rapidcheck)
 
+add_executable(test_backend_roundtrip test_backend_roundtrip.cpp)
+target_link_libraries(test_backend_roundtrip PRIVATE lumberjack::lumberjack rapidcheck)
+
 enable_testing()
 add_test(NAME LogLevelOrdering COMMAND test_log_level_ordering)
 add_test(NAME LogLevelGating COMMAND test_log_level_gating)
+add_test(NAME BackendRoundtrip COMMAND test_backend_roundtrip)
 
 # Additional tests will be added in task 12

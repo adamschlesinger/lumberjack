@@ -97,7 +97,7 @@ This implementation plan breaks down the lumberjack logging library into increme
     - **Validates: Requirements 3.5, 7.5**
 
 - [ ] 7. Implement RAII Span class (optional feature)
-  - [ ] 7.1 Add Span class to `lumberjack.h`
+  - [x] 7.1 Add Span class to `lumberjack.h`
     - Constructor: takes LogLevel and name, checks if level is active, calls backend span_begin
     - Destructor: calculates elapsed time, calls backend span_end
     - Use `std::chrono::steady_clock` for timing

@@ -45,6 +45,26 @@ using LogFunction = void (*)(LogLevel, const char*, ...);
 // Global function pointer array (exposed for macro use)
 extern LogFunction g_logFunctions[LOG_COUNT];
 
+// RAII Span class for automatic timing measurement
+class Span {
+public:
+    Span(LogLevel level, const char* name);
+    ~Span();
+    
+    // Delete copy/move constructors and assignment operators
+    Span(const Span&) = delete;
+    Span& operator=(const Span&) = delete;
+    Span(Span&&) = delete;
+    Span& operator=(Span&&) = delete;
+    
+private:
+    LogLevel m_level;
+    const char* m_name;
+    void* m_handle;
+    std::chrono::steady_clock::time_point m_start;
+    bool m_active;
+};
+
 } // namespace lumberjack
 
 // Logging macros (global namespace for convenience)

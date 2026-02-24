@@ -100,4 +100,37 @@ LogBackend* get_backend() {
     return g_activeBackend;
 }
 
+// Span class implementation
+Span::Span(LogLevel level, const char* name)
+    : m_level(level)
+    , m_name(name)
+    , m_handle(nullptr)
+    , m_active(false)
+{
+    // Check if this level is active
+    if (level <= get_level()) {
+        m_active = true;
+        m_start = std::chrono::steady_clock::now();
+        
+        // Call backend span_begin if available
+        if (g_activeBackend && g_activeBackend->span_begin) {
+            m_handle = g_activeBackend->span_begin(level, name);
+        }
+    }
+}
+
+Span::~Span() {
+    if (m_active) {
+        // Calculate elapsed time in microseconds
+        auto end = std::chrono::steady_clock::now();
+        auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(
+            end - m_start).count();
+        
+        // Call backend span_end if available
+        if (g_activeBackend && g_activeBackend->span_end) {
+            g_activeBackend->span_end(m_handle, m_level, m_name, elapsed);
+        }
+    }
+}
+
 } // namespace lumberjack

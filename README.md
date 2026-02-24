@@ -137,8 +137,10 @@ Output:
 
 ### Custom Backends
 
+**Important**: All LogBackend function pointers must be non-null. Backends that don't need certain functionality should provide no-op implementations.
+
 ```cpp
-// Define your backend
+// Define your backend - all function pointers must be valid
 lumberjack::LogBackend my_backend = {
     .name = "my_backend",
     .init = []() { /* setup */ },
@@ -147,17 +149,19 @@ lumberjack::LogBackend my_backend = {
         // Send to your logging system
     },
     .span_begin = [](lumberjack::LogLevel level, const char* name) -> void* {
-        return nullptr; // Optional span tracking
+        return nullptr; // Return handle for span tracking, or nullptr
     },
     .span_end = [](void* handle, lumberjack::LogLevel level, 
                    const char* name, long long elapsed_us) {
-        // Handle span completion
+        // Handle span completion (even if you don't track spans, provide this)
     }
 };
 
 // Switch to your backend
 lumberjack::set_backend(&my_backend);
 ```
+
+The library validates all function pointers when you call `set_backend()` and will reject invalid backends. This contract enables truly branchless dispatch with zero runtime checks.
 
 ### CMake Integration
 
@@ -186,7 +190,10 @@ g_logFunctions[level](level, fmt, args);  // Direct function pointer call
 
 When logging is disabled for a level, the function pointer points to a no-op that returns immediately. This eliminates branch mispredictions and keeps the CPU pipeline flowing.
 
-**Overhead when disabled**: ~1-2 CPU cycles (function pointer call + immediate return)
+**Backend Contract**: All backends must provide valid (non-null) function pointers. This contract is enforced at configuration time (when calling `set_backend()`), eliminating all runtime checks in the hot path.
+
+**Overhead when disabled**: ~1-2 CPU cycles (function pointer call + immediate return)  
+**Runtime checks in hot path**: Zero - all function pointers guaranteed valid by contract
 
 ## Thread Safety
 

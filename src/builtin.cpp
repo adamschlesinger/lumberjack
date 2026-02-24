@@ -83,4 +83,10 @@ LogBackend* builtin_backend() {
     return &backend;
 }
 
+// Set output file for built-in backend (for testing)
+void builtin_set_output(FILE* file) {
+    std::lock_guard<std::mutex> lock(g_mutex);
+    g_output = file;
+}
+
 } // namespace lumberjack

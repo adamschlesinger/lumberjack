@@ -36,6 +36,9 @@ LogBackend* get_backend();
 // Backend accessors
 LogBackend* builtin_backend();
 
+// Built-in backend configuration (for testing)
+void builtin_set_output(FILE* file);
+
 // Function pointer type for branchless dispatch
 using LogFunction = void (*)(LogLevel, const char*, ...);
 

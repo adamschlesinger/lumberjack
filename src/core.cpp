@@ -100,9 +100,4 @@ LogBackend* get_backend() {
     return g_activeBackend;
 }
 
-LogBackend* builtin_backend() {
-    // Will be implemented in task 6.2
-    return nullptr;
-}
-
 } // namespace lumberjack

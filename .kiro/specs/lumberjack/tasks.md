@@ -86,7 +86,7 @@ This implementation plan breaks down the lumberjack logging library into increme
     - Set name field to "builtin"
     - _Requirements: 3.2, 4.2, 5.1_
 
-  - [ ]* 6.3 Write unit tests for built-in backend output format
+  - [x] 6.3 Write unit tests for built-in backend output format
     - Test timestamp format
     - Test level string formatting
     - Test message content preservation

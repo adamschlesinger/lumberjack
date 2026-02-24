@@ -10,7 +10,7 @@
 // Validates: Requirements 4.4, 13.4
 // Tests:
 // - Timestamp format: [YYYY-MM-DD HH:MM:SS.mmm]
-// - Level string formatting: [ERROR], [WARN], [INFO], [DEBUG]
+// - Level string formatting: [ERROR], [WARN ], [INFO ], [DEBUG] (padded to 5 chars)
 // - Message content preservation
 
 // Helper to read file content
@@ -116,8 +116,8 @@ bool test_level_string_formatting() {
         LOG_WARN("test");
     });
     
-    if (output_warn.find("[WARN]") == std::string::npos) {
-        std::cerr << "FAILED: WARN level string not found" << std::endl;
+    if (output_warn.find("[WARN ]") == std::string::npos) {
+        std::cerr << "FAILED: WARN level string not found (expected [WARN ])" << std::endl;
         std::cerr << "Output: '" << output_warn << "'" << std::endl;
         return false;
     }
@@ -128,8 +128,8 @@ bool test_level_string_formatting() {
         LOG_INFO("test");
     });
     
-    if (output_info.find("[INFO]") == std::string::npos) {
-        std::cerr << "FAILED: INFO level string not found" << std::endl;
+    if (output_info.find("[INFO ]") == std::string::npos) {
+        std::cerr << "FAILED: INFO level string not found (expected [INFO ])" << std::endl;
         std::cerr << "Output: '" << output_info << "'" << std::endl;
         return false;
     }

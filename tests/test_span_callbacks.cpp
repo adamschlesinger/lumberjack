@@ -30,7 +30,7 @@ int main() {
     char buffer[512];
     bool found_span = false;
     while (fgets(buffer, sizeof(buffer), temp)) {
-        if (strstr(buffer, "SPAN 'test_operation' took") && strstr(buffer, "μs")) {
+        if (strstr(buffer, "SPAN 'test_operation' took") && strstr(buffer, "us")) {
             found_span = true;
             printf("Found span output: %s", buffer);
             break;

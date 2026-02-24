@@ -60,7 +60,7 @@ This implementation plan breaks down the lumberjack logging library into increme
     - Call `set_backend(builtin_backend())`
     - _Requirements: 5.1, 5.2, 5.4, 5.5_
 
-  - [ ]* 4.5 Write property test for log level gating
+  - [x] 4.5 Write property test for log level gating
     - **Property 1: Log Level Gating**
     - **Validates: Requirements 1.3, 1.4, 2.3, 2.4, 2.5, 2.6, 2.7**
 

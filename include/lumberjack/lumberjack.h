@@ -17,6 +17,8 @@ enum LogLevel {
 };
 
 // Backend interface for pluggable logging destinations
+// CONTRACT: All function pointers must be non-null. Backends that don't need
+// certain functionality should provide no-op implementations.
 struct LogBackend {
     const char* name;
     void (*init)();

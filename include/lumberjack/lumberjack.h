@@ -38,22 +38,38 @@ LogBackend* get_backend();
 // Backend accessors
 LogBackend* builtin_backend();
 
-// Built-in backend configuration (for testing)
+// Built-in backend configuration
 void builtin_set_output(FILE* file);
 
-// Function pointer type for branchless dispatch
-using LogFunction = void (*)(LogLevel, const char*, ...);
+// Buffered write mode: logs are accumulated in a memory buffer and only
+// flushed when the buffer is full, on explicit flush, or on shutdown.
+// This eliminates per-call fflush() overhead.
+void builtin_set_buffered(bool enabled, size_t buffer_size = 8192);
 
-// Global function pointer array (exposed for macro use)
+// Manually flush the built-in backend's buffer (only relevant in buffered mode)
+void builtin_flush();
+
+// Cached timestamp mode: instead of calling localtime/strftime per log line,
+// the timestamp string is cached and only refreshed every `interval_ms`
+// milliseconds. Set to 0 to disable caching (recompute every call).
+void builtin_set_timestamp_cache_ms(unsigned int interval_ms);
+
+// Function pointer types for branchless dispatch
+using LogFunction = void (*)(LogLevel, const char*, ...);
+using ClockFunction = std::chrono::steady_clock::time_point (*)();
+
+// Global function pointer arrays (exposed for macro and Span use)
 extern LogFunction g_logFunctions[LOG_COUNT];
+extern ClockFunction g_clockFunctions[LOG_COUNT];
 
 // RAII Span class for automatic timing measurement
+// When the log level is inactive, both the clock reads and span callbacks
+// are no-ops via function pointer dispatch — near zero overhead.
 class Span {
 public:
     Span(LogLevel level, const char* name);
     ~Span();
     
-    // Delete copy/move constructors and assignment operators
     Span(const Span&) = delete;
     Span& operator=(const Span&) = delete;
     Span(Span&&) = delete;

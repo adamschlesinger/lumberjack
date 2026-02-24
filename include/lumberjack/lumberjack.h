@@ -64,7 +64,6 @@ private:
     const char* m_name;
     void* m_handle;
     std::chrono::steady_clock::time_point m_start;
-    bool m_active;
 };
 
 } // namespace lumberjack

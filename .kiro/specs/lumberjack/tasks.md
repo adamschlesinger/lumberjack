@@ -125,14 +125,14 @@ This implementation plan breaks down the lumberjack logging library into increme
 - [x] 8. Checkpoint - Ensure core library is functional
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 9. Implement thread safety tests
-  - [ ]* 9.1 Write property test for concurrent logging thread safety
+- [x] 9. Implement thread safety tests
+  - [x]* 9.1 Write property test for concurrent logging thread safety
     - **Property 7: Thread Safety of Concurrent Logging**
     - **Validates: Requirements 11.1, 11.2**
     - Create multiple threads calling logging macros concurrently
     - Verify no crashes, data races, or output corruption
 
-  - [ ]* 9.2 Write unit tests for thread safety documentation
+  - [x]* 9.2 Write unit tests for thread safety documentation
     - Test that set_level and set_backend are documented as not thread-safe
     - Verify documentation mentions custom backend thread safety responsibility
     - _Requirements: 11.3, 11.4, 11.5_

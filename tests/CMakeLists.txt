@@ -39,6 +39,9 @@ target_link_libraries(test_thread_safety PRIVATE lumberjack::lumberjack rapidche
 add_executable(test_backend_lifecycle test_backend_lifecycle.cpp)
 target_link_libraries(test_backend_lifecycle PRIVATE lumberjack::lumberjack rapidcheck)
 
+add_executable(test_pretty_backend_api test_pretty_backend_api.cpp)
+target_link_libraries(test_pretty_backend_api PRIVATE lumberjack::lumberjack)
+
 enable_testing()
 add_test(NAME LogLevelOrdering COMMAND test_log_level_ordering)
 add_test(NAME LogLevelGating COMMAND test_log_level_gating)
@@ -50,6 +53,7 @@ add_test(NAME SpanLifecycle COMMAND test_span_lifecycle)
 add_test(NAME SpanLevelGating COMMAND test_span_level_gating)
 add_test(NAME ThreadSafety COMMAND test_thread_safety)
 add_test(NAME BackendLifecycle COMMAND test_backend_lifecycle)
+add_test(NAME PrettyBackendAPI COMMAND test_pretty_backend_api)
 
 # Performance benchmark (not a test, run manually)
 add_executable(perf_branching_comparison perf_branching_comparison.cpp)

@@ -16,7 +16,7 @@ This plan implements the pretty backend for lumberjack in incremental steps, sta
   - Add `pretty_backend()` declaration to `include/lumberjack/lumberjack.h`
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 7.1, 7.2, 7.3, 7.4_
 
-- [ ]* 1.1 Write unit tests for API integration
+- [x] 1.1 Write unit tests for API integration
   - Test that `pretty_backend()` returns non-null pointer
   - Test that backend name field is "pretty"
   - Test that all callback function pointers are non-null

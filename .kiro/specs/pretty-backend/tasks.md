@@ -44,7 +44,7 @@ This plan implements the pretty backend for lumberjack in incremental steps, sta
     - **Property 10: Log Message Format**
     - **Validates: Requirements 8.1, 8.4**
 
-- [ ] 3. Checkpoint - Ensure basic logging works
+- [x] 3. Checkpoint - Ensure basic logging works
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 4. Implement span handle structure and basic span operations

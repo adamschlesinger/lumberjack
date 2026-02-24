@@ -137,8 +137,8 @@ This implementation plan breaks down the lumberjack logging library into increme
     - Verify documentation mentions custom backend thread safety responsibility
     - _Requirements: 11.3, 11.4, 11.5_
 
-- [ ] 10. Implement property test for backend lifecycle sequencing
-  - [ ]* 10.1 Write property test for backend lifecycle sequencing
+- [x] 10. Implement property test for backend lifecycle sequencing
+  - [x]* 10.1 Write property test for backend lifecycle sequencing
     - **Property 3: Backend Lifecycle Sequencing**
     - **Validates: Requirements 3.4, 7.3, 7.4**
     - Test shutdown called before init on backend switch

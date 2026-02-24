@@ -36,6 +36,9 @@ target_link_libraries(test_span_level_gating PRIVATE lumberjack::lumberjack rapi
 add_executable(test_thread_safety test_thread_safety.cpp)
 target_link_libraries(test_thread_safety PRIVATE lumberjack::lumberjack rapidcheck)
 
+add_executable(test_backend_lifecycle test_backend_lifecycle.cpp)
+target_link_libraries(test_backend_lifecycle PRIVATE lumberjack::lumberjack rapidcheck)
+
 enable_testing()
 add_test(NAME LogLevelOrdering COMMAND test_log_level_ordering)
 add_test(NAME LogLevelGating COMMAND test_log_level_gating)
@@ -46,5 +49,6 @@ add_test(NAME SpanCallbacks COMMAND test_span_callbacks)
 add_test(NAME SpanLifecycle COMMAND test_span_lifecycle)
 add_test(NAME SpanLevelGating COMMAND test_span_level_gating)
 add_test(NAME ThreadSafety COMMAND test_thread_safety)
+add_test(NAME BackendLifecycle COMMAND test_backend_lifecycle)
 
 # Additional tests will be added in task 12

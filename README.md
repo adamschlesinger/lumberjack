@@ -195,6 +195,33 @@ When logging is disabled for a level, the function pointer points to a no-op tha
 **Overhead when disabled**: ~1-2 CPU cycles (function pointer call + immediate return)  
 **Runtime checks in hot path**: Zero - all function pointers guaranteed valid by contract
 
+### Benchmark Results
+
+Performance comparison against traditional branching logger with equivalent features (timestamps, mutex, formatting, flushing). 1,000,000 iterations on macOS:
+
+| Scenario | Empty (no-op) | Lumberjack | Branching | Speedup |
+|----------|---------------|------------|-----------|---------|
+| Single disabled call | 15.7 ns | 14.6 ns | 15.0 ns | ~same |
+| Single enabled call | - | 837 ns | 824 ns | ~same |
+| Mixed workload (3 enabled + 2 disabled) | - | 2,456 ns | 2,429 ns | ~same |
+| Tight loop (100 disabled calls) | 49.9 ns | 82.0 ns | 167.2 ns | 2.04x faster |
+| Tight loop mixed (60 disabled + 40 enabled) | - | 31,982 ns | 31,510 ns | ~same |
+| Tight loop (100 enabled calls) | - | 79,380 ns | 78,650 ns | ~same |
+
+**Key Insights:**
+
+The branchless design shines in tight loops with disabled logging - the most common pattern in performance-critical code:
+- **Lumberjack overhead**: 32.1 ns for 100 calls = **0.32 ns per disabled log** (1.64x cost of compiled-out code)
+- **Branching overhead**: 117.4 ns for 100 calls = **1.17 ns per disabled log** (3.35x cost of compiled-out code)
+- **Result**: 2.04x faster and much closer to zero-cost
+
+When logs are enabled, I/O dominates (~800 ns per log) and dispatch method doesn't matter. The branchless advantage appears specifically where it's needed: hot paths with disabled debug logging.
+
+Run the benchmark yourself:
+```bash
+./run_perf_test.sh
+```
+
 ## Thread Safety
 
 - **Concurrent logging**: Safe - the built-in backend uses mutex protection

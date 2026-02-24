@@ -51,4 +51,6 @@ add_test(NAME SpanLevelGating COMMAND test_span_level_gating)
 add_test(NAME ThreadSafety COMMAND test_thread_safety)
 add_test(NAME BackendLifecycle COMMAND test_backend_lifecycle)
 
-# Additional tests will be added in task 12
+# Performance benchmark (not a test, run manually)
+add_executable(perf_branching_comparison perf_branching_comparison.cpp)
+target_link_libraries(perf_branching_comparison PRIVATE lumberjack::lumberjack)

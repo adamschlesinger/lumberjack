@@ -114,7 +114,7 @@ This implementation plan breaks down the lumberjack logging library into increme
     - `builtin_span_end()`: format and log span message with elapsed time
     - _Requirements: 4.5, 6.2, 6.3_
 
-  - [ ]* 7.4 Write property test for span lifecycle callbacks
+  - [x] 7.4 Write property test for span lifecycle callbacks
     - **Property 5: Span Lifecycle Callbacks**
     - **Validates: Requirements 6.2, 6.3**
 

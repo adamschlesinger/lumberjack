@@ -77,16 +77,25 @@ void set_level(LogLevel level) {
 }
 
 LogLevel get_level() {
-    // Will be implemented in task 4.3
     return g_currentLevel;
 }
 
 void set_backend(LogBackend* backend) {
-    // Will be implemented in task 4.3
+    // Call shutdown on old backend if it exists
+    if (g_activeBackend && g_activeBackend->shutdown) {
+        g_activeBackend->shutdown();
+    }
+
+    // Update pointer to new backend
+    g_activeBackend = backend;
+
+    // Call init on new backend if it exists
+    if (g_activeBackend && g_activeBackend->init) {
+        g_activeBackend->init();
+    }
 }
 
 LogBackend* get_backend() {
-    // Will be implemented in task 4.3
     return g_activeBackend;
 }
 

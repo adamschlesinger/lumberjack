@@ -49,7 +49,7 @@ This implementation plan breaks down the lumberjack logging library into increme
     - For levels > active level: point to `log_noop`
     - _Requirements: 1.4, 1.5, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7_
 
-  - [ ] 4.3 Implement `get_level()`, `set_backend()`, `get_backend()` functions
+  - [x] 4.3 Implement `get_level()`, `set_backend()`, `get_backend()` functions
     - `get_level()`: return `g_currentLevel`
     - `set_backend()`: call shutdown on old backend, call init on new backend, update pointer
     - `get_backend()`: return `g_activeBackend`

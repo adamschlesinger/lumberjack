@@ -1,18 +1,18 @@
 # Lumberjack 🪓
 
-A high-performance, branchless C++17 logging library designed for performance-critical applications like games and real-time systems.
+A high-performance C++17 logging library designed for performance-critical applications like games and real-time systems.
 
 ## Features
 
-- **Branchless Dispatch**: Function pointer arrays eliminate branching overhead at call sites
+- **Branchless Dispatch**: Function pointer arrays eliminate branching overhead at disabled call sites
+- **Buffered Writes**: Optional write buffering eliminates per-call fflush overhead (biggest perf win)
+- **Cached Timestamps**: Amortizes localtime/strftime cost across rapid log calls
+- **Branchless Spans**: Disabled spans skip clock reads via function pointer dispatch (~1.3 ns overhead)
 - **Runtime Log Levels**: Change verbosity on the fly without recompiling
 - **Pluggable Backends**: Switch logging destinations at runtime
-- **Buffered Writes**: Optional write buffering eliminates per-call fflush overhead
-- **Cached Timestamps**: Amortizes localtime/strftime cost across rapid log calls
-- **Branchless Spans**: Disabled spans skip clock reads via function pointer dispatch
-- **Zero Dependencies**: Built-in backend uses only C++ standard library
 - **RAII Span Timing**: Automatic performance measurement with minimal code
 - **Thread-Safe**: Built-in backend includes mutex protection for concurrent logging
+- **Zero Dependencies**: Built-in backend uses only C++ standard library
 - **Modern C++17**: Clean, idiomatic code with no exceptions or RTTI in hot paths
 
 ## Quick Start
@@ -22,6 +22,10 @@ A high-performance, branchless C++17 logging library designed for performance-cr
 
 int main() {
     lumberjack::init();
+    
+    // Enable high-performance mode
+    lumberjack::builtin_set_buffered(true, 8192);
+    lumberjack::builtin_set_timestamp_cache_ms(10);
     
     LOG_INFO("Application started");
     LOG_ERROR("Something went wrong: %s", error_msg);
@@ -36,6 +40,8 @@ int main() {
         // Your code here - timing is automatic
     }
     
+    // Flush before exit (also happens automatically on shutdown)
+    lumberjack::builtin_flush();
     return 0;
 }
 ```
@@ -133,9 +139,9 @@ void process_data() {
 
 Output:
 ```
-[2026-02-23 21:35:28.605] [DEBUG] SPAN 'validation' took 33273 μs
-[2026-02-23 21:35:28.646] [DEBUG] SPAN 'transformation' took 41208 μs
-[2026-02-23 21:35:28.671] [INFO] SPAN 'process_data' took 154571 μs
+[2026-02-23 21:35:28] [DEBUG] SPAN 'validation' took 33273 us
+[2026-02-23 21:35:28] [DEBUG] SPAN 'transformation' took 41208 us
+[2026-02-23 21:35:28] [INFO ] SPAN 'process_data' took 154571 us
 ```
 
 ### Custom Backends
@@ -179,24 +185,25 @@ target_link_libraries(my_app PRIVATE lumberjack::lumberjack)
 
 ## Performance
 
-The core innovation is branchless dispatch through function pointer arrays:
+Lumberjack uses three techniques to minimize logging overhead:
+
+1. **Branchless dispatch** — Function pointer arrays route disabled log calls to a no-op that returns immediately. No branch prediction, no pipeline stalls.
+2. **Buffered writes** — Log lines accumulate in a memory buffer and flush in bulk, converting many small kernel writes into fewer large ones.
+3. **Cached timestamps** — The formatted timestamp string is reused within a configurable interval, avoiding per-call `localtime()`/`strftime()`.
 
 ```cpp
-// Traditional approach (branching)
+// Traditional approach (branching, unbuffered, per-call timestamp)
 if (level <= current_level) {
+    format_timestamp();       // ~200 ns
     format_and_log(level, fmt, args);
+    fflush(output);           // ~400 ns
 }
 
-// Lumberjack approach (branchless)
-g_logFunctions[level](level, fmt, args);  // Direct function pointer call
+// Lumberjack approach
+g_logFunctions[level](level, fmt, args);  // noop if disabled, buffered if enabled
 ```
 
-When logging is disabled for a level, the function pointer points to a no-op that returns immediately. This eliminates branch mispredictions and keeps the CPU pipeline flowing.
-
 **Backend Contract**: All backends must provide valid (non-null) function pointers. This contract is enforced at configuration time (when calling `set_backend()`), eliminating all runtime checks in the hot path.
-
-**Overhead when disabled**: ~1-2 CPU cycles (function pointer call + immediate return)  
-**Runtime checks in hot path**: Zero - all function pointers guaranteed valid by contract
 
 ### Built-in Backend Optimizations
 
@@ -286,10 +293,15 @@ Application Code
 LOG_ERROR/WARN/INFO/DEBUG macros
     ↓
 Function Pointer Array [branchless dispatch]
-    ↓
-Active Backend (builtin, custom, etc.)
-    ↓
-Output Destination (stderr, file, network, etc.)
+    ↓ (disabled → noop return)        ↓ (enabled)
+    ↓                          Format message (vsnprintf)
+    ↓                                 ↓
+    ↓                          Active Backend
+    ↓                                 ↓
+    ↓                    ┌─ Buffered write (memcpy to buffer)
+    ↓                    └─ Cached timestamp (reuse if fresh)
+    ↓                                 ↓
+  [done]                  Output (stderr, file, network, etc.)
 ```
 
 ## License

@@ -35,6 +35,15 @@ enum LogLevel {
     LOG_COUNT       = 5
 };
 
+// Concise aliases inspired by Rust's tracing crate.
+// Usage: lumberjack::Level::Error, lumberjack::Level::Debug, etc.
+namespace Level {
+    constexpr LogLevel Error = LOG_LEVEL_ERROR;
+    constexpr LogLevel Warn  = LOG_LEVEL_WARN;
+    constexpr LogLevel Info  = LOG_LEVEL_INFO;
+    constexpr LogLevel Debug = LOG_LEVEL_DEBUG;
+} // namespace Level
+
 // ----------------------------------------------------------------------------
 // Backend interface
 // ----------------------------------------------------------------------------
@@ -192,9 +201,38 @@ private:
     lumberjack::g_logFunctions[lumberjack::LOG_LEVEL_INFO](lumberjack::LOG_LEVEL_INFO, fmt, ##__VA_ARGS__)
 #define LOG_DEBUG(fmt, ...) \
     lumberjack::g_logFunctions[lumberjack::LOG_LEVEL_DEBUG](lumberjack::LOG_LEVEL_DEBUG, fmt, ##__VA_ARGS__)
+// Log at a dynamic level — useful when the level is a runtime variable.
+//   LogLevel lvl = compute_level();
+//   LOG_AT(lvl, "something happened: %s", detail);
+#define LOG_AT(level, fmt, ...) \
+    lumberjack::g_logFunctions[level](level, fmt, ##__VA_ARGS__)
 
 // Creates an RAII Span scoped to the enclosing block. The span name appears
 // in backend output along with the elapsed time when the block exits.
 #define LOG_SPAN(level, name) lumberjack::Span _log_span_##__LINE__(level, name)
+
+// Level-specific span macros — tracing-style convenience.
+//   ERROR_SPAN("db_write");   // equivalent to LOG_SPAN(lumberjack::LOG_LEVEL_ERROR, "db_write")
+//   INFO_SPAN("request");
+//   TRACE_SPAN("hot_loop");
+#define ERROR_SPAN(name) LOG_SPAN(lumberjack::LOG_LEVEL_ERROR, name)
+#define WARN_SPAN(name)  LOG_SPAN(lumberjack::LOG_LEVEL_WARN, name)
+#define INFO_SPAN(name)  LOG_SPAN(lumberjack::LOG_LEVEL_INFO, name)
+#define DEBUG_SPAN(name) LOG_SPAN(lumberjack::LOG_LEVEL_DEBUG, name)
+
+// Short-form macros — inspired by Rust's tracing crate.
+//   ERROR("connection lost: %s", reason);
+//   INFO("listening on port %d", port);
+//   TRACE("tick");
+//
+// These are opt-in. If another library defines the same names, you can
+// #define LUMBERJACK_NO_SHORT_MACROS before including this header to
+// suppress them and stick with the LOG_* variants.
+#ifndef LUMBERJACK_NO_SHORT_MACROS
+#define ERROR(fmt, ...) LOG_ERROR(fmt, ##__VA_ARGS__)
+#define WARN(fmt, ...)  LOG_WARN(fmt, ##__VA_ARGS__)
+#define INFO(fmt, ...)  LOG_INFO(fmt, ##__VA_ARGS__)
+#define DEBUG(fmt, ...) LOG_DEBUG(fmt, ##__VA_ARGS__)
+#endif
 
 #endif // LUMBERJACK_H

@@ -93,22 +93,22 @@ namespace custom {
 int main() {
     // Start with the default builtin backend
     lumberjack::init();
-    LOG_INFO("=== Custom Backend Example ===");
-    LOG_INFO("Starting with builtin backend (stderr)\n");
+    INFO("=== Custom Backend Example ===");
+    INFO("Starting with builtin backend (stderr)\n");
     
     // Log some messages with builtin backend
-    LOG_INFO("Message 1 - using builtin backend");
-    LOG_WARN("Message 2 - using builtin backend");
-    LOG_ERROR("Message 3 - using builtin backend");
+    INFO("Message 1 - using builtin backend");
+    WARN("Message 2 - using builtin backend");
+    ERROR("Message 3 - using builtin backend");
     
     // Switch to custom backend
     printf("\n--- Switching to Custom Backend ---\n");
     lumberjack::set_backend(&custom::backend);
     
     // Log messages with custom backend (stored in memory, not printed)
-    LOG_INFO("Message 4 - using custom backend (buffered)");
-    LOG_WARN("Message 5 - using custom backend (buffered)");
-    LOG_ERROR("Message 6 - using custom backend (buffered)");
+    INFO("Message 4 - using custom backend (buffered)");
+    WARN("Message 5 - using custom backend (buffered)");
+    ERROR("Message 6 - using custom backend (buffered)");
     
     // Dump the buffer to see what was captured
     custom::dump_buffer();
@@ -117,11 +117,11 @@ int main() {
     printf("--- Logging More Messages ---\n");
     custom::clear_buffer();
     
-    LOG_INFO("Message 7 - after buffer clear");
-    LOG_DEBUG("Message 8 - debug level (not visible at INFO level)");
+    INFO("Message 7 - after buffer clear");
+    DEBUG("Message 8 - debug level (not visible at INFO level)");
     
-    lumberjack::set_level(lumberjack::LOG_LEVEL_DEBUG);
-    LOG_DEBUG("Message 9 - debug level (now visible)");
+    lumberjack::set_level(lumberjack::Level::Debug);
+    DEBUG("Message 9 - debug level (now visible)");
     
     custom::dump_buffer();
     
@@ -130,7 +130,7 @@ int main() {
     custom::clear_buffer();
     
     {
-        LOG_SPAN(lumberjack::LOG_LEVEL_INFO, "custom_backend_span");
+        INFO_SPAN("custom_backend_span");
         // Simulate some work
         for (volatile int i = 0; i < 1000000; i++) {}
     }
@@ -141,14 +141,14 @@ int main() {
     printf("--- Switching Back to Builtin Backend ---\n");
     lumberjack::set_backend(lumberjack::builtin_backend());
     
-    LOG_INFO("Message 10 - back to builtin backend (stderr)");
-    LOG_INFO("Notice that shutdown() was called on custom backend");
+    INFO("Message 10 - back to builtin backend (stderr)");
+    INFO("Notice that shutdown() was called on custom backend");
     
     // Verify we're using builtin backend
     lumberjack::LogBackend* current = lumberjack::get_backend();
     printf("\nCurrent backend name: %s\n", current->name);
     
-    LOG_INFO("\nExample complete!");
+    INFO("\nExample complete!");
     
     return 0;
 }

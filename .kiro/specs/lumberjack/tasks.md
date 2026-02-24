@@ -122,7 +122,7 @@ This implementation plan breaks down the lumberjack logging library into increme
     - **Property 6: Span Level Gating**
     - **Validates: Requirements 6.5**
 
-- [ ] 8. Checkpoint - Ensure core library is functional
+- [x] 8. Checkpoint - Ensure core library is functional
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 9. Implement thread safety tests

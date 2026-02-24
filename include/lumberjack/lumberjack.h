@@ -44,4 +44,14 @@ extern LogFunction g_logFunctions[LOG_COUNT];
 
 } // namespace lumberjack
 
+// Logging macros (global namespace for convenience)
+#define LOG_ERROR(fmt, ...) \
+    lumberjack::g_logFunctions[lumberjack::LOG_LEVEL_ERROR](lumberjack::LOG_LEVEL_ERROR, fmt, ##__VA_ARGS__)
+#define LOG_WARN(fmt, ...) \
+    lumberjack::g_logFunctions[lumberjack::LOG_LEVEL_WARN](lumberjack::LOG_LEVEL_WARN, fmt, ##__VA_ARGS__)
+#define LOG_INFO(fmt, ...) \
+    lumberjack::g_logFunctions[lumberjack::LOG_LEVEL_INFO](lumberjack::LOG_LEVEL_INFO, fmt, ##__VA_ARGS__)
+#define LOG_DEBUG(fmt, ...) \
+    lumberjack::g_logFunctions[lumberjack::LOG_LEVEL_DEBUG](lumberjack::LOG_LEVEL_DEBUG, fmt, ##__VA_ARGS__)
+
 #endif // LUMBERJACK_H

@@ -27,7 +27,7 @@ This implementation plan breaks down the lumberjack logging library into increme
     - **Property: Log Level Ordering Invariant**
     - **Validates: Requirements 2.1**
 
-- [ ] 3. Implement logging macros
+- [x] 3. Implement logging macros
   - Create macros in `lumberjack.h`: `LOG_ERROR`, `LOG_WARN`, `LOG_INFO`, `LOG_DEBUG`
   - Each macro expands to `g_logFunctions[LOG_LEVEL_X](LOG_LEVEL_X, fmt, ##__VA_ARGS__)`
   - Ensure macros support printf-style format strings and variadic arguments

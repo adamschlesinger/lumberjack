@@ -58,7 +58,8 @@ static const char* level_to_string(LogLevel level) {
 
 // Public API implementations (stubs for now, will be implemented in later tasks)
 void init() {
-    // Will be implemented in task 4.4
+    set_level(LOG_LEVEL_INFO);
+    set_backend(builtin_backend());
 }
 
 void set_level(LogLevel level) {

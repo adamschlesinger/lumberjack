@@ -55,7 +55,7 @@ This implementation plan breaks down the lumberjack logging library into increme
     - `get_backend()`: return `g_activeBackend`
     - _Requirements: 3.3, 3.4, 3.6, 7.3, 7.4_
 
-  - [ ] 4.4 Implement `init()` function
+  - [x] 4.4 Implement `init()` function
     - Call `set_level(LOG_LEVEL_INFO)`
     - Call `set_backend(builtin_backend())`
     - _Requirements: 5.1, 5.2, 5.4, 5.5_

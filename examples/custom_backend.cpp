@@ -1,154 +1,160 @@
-// Custom backend example demonstrating backend implementation and switching
-// This example shows how to create a custom logging backend with in-memory buffering
+// Custom backend example demonstrating:
+//   1. A minimal custom backend (in-memory buffer)
+//   2. Using lumberjack::WriteBuffer and TimestampCache for high-performance output
 
 #include <lumberjack/lumberjack.h>
+#include <lumberjack/utils.h>
 #include <vector>
 #include <string>
 #include <cstdio>
-#include <cstring>
+#include <mutex>
 
-// Custom backend that stores log messages in memory
-namespace custom {
-    // In-memory buffer to store log messages
-    static std::vector<std::string> g_messageBuffer;
-    static bool g_initialized = false;
-    
-    // Backend initialization - called when backend is activated
-    void init() {
-        printf("[CustomBackend] init() called - clearing buffer\n");
-        g_messageBuffer.clear();
-        g_initialized = true;
-    }
-    
-    // Backend shutdown - called when backend is deactivated
-    void shutdown() {
-        printf("[CustomBackend] shutdown() called - had %zu messages in buffer\n", 
-               g_messageBuffer.size());
-        g_initialized = false;
-    }
-    
-    // Write a log message to the in-memory buffer
-    void log_write(lumberjack::LogLevel level, const char* message) {
-        if (!g_initialized) {
-            return;
-        }
-        
-        // Format: [LEVEL] message
-        const char* level_str = "";
-        switch (level) {
-            case lumberjack::LOG_LEVEL_ERROR: level_str = "ERROR"; break;
-            case lumberjack::LOG_LEVEL_WARN:  level_str = "WARN";  break;
-            case lumberjack::LOG_LEVEL_INFO:  level_str = "INFO";  break;
-            case lumberjack::LOG_LEVEL_DEBUG: level_str = "DEBUG"; break;
-            default: level_str = "UNKNOWN"; break;
-        }
-        
-        char formatted[512];
-        snprintf(formatted, sizeof(formatted), "[%s] %s", level_str, message);
-        g_messageBuffer.push_back(formatted);
-    }
-    
-    // Span begin callback - return a handle for correlation
-    void* span_begin(lumberjack::LogLevel level, const char* name) {
-        // For this simple backend, we don't need to track spans
-        // Just return a dummy handle
-        return (void*)0x1;
-    }
-    
-    // Span end callback - log the span timing
-    void span_end(void* handle, lumberjack::LogLevel level, 
-                  const char* name, long long elapsed_us) {
-        char message[256];
-        snprintf(message, sizeof(message), "SPAN '%s' took %lld μs", 
-                 name, elapsed_us);
-        log_write(level, message);
-    }
-    
-    // Helper function to dump all buffered messages
-    void dump_buffer() {
-        printf("\n[CustomBackend] Buffer contents (%zu messages):\n", 
-               g_messageBuffer.size());
-        for (size_t i = 0; i < g_messageBuffer.size(); i++) {
-            printf("  %zu: %s\n", i + 1, g_messageBuffer[i].c_str());
-        }
-        printf("\n");
-    }
-    
-    // Helper function to clear the buffer
-    void clear_buffer() {
-        g_messageBuffer.clear();
-    }
-    
-    // Backend structure definition
-    lumberjack::LogBackend backend = {
-        "custom_memory",  // Backend name
-        init,             // init function
-        shutdown,         // shutdown function
-        log_write,        // log_write function
-        span_begin,       // span_begin function
-        span_end          // span_end function
-    };
+// =========================================================================
+// Example 1: Minimal custom backend — stores messages in memory
+// =========================================================================
+namespace memory_backend {
+
+static std::vector<std::string> g_messages;
+
+void init()     { g_messages.clear(); }
+void shutdown() { g_messages.clear(); }
+
+void log_write(lumberjack::LogLevel level, const char* message) {
+    const char* levels[] = {"NONE", "ERROR", "WARN", "INFO", "DEBUG"};
+    char buf[512];
+    snprintf(buf, sizeof(buf), "[%s] %s", levels[level], message);
+    g_messages.push_back(buf);
 }
 
-int main() {
-    // Start with the default builtin backend
-    lumberjack::init();
-    INFO("=== Custom Backend Example ===");
-    INFO("Starting with builtin backend (stderr)\n");
-    
-    // Log some messages with builtin backend
-    INFO("Message 1 - using builtin backend");
-    WARN("Message 2 - using builtin backend");
-    ERROR("Message 3 - using builtin backend");
-    
-    // Switch to custom backend
-    printf("\n--- Switching to Custom Backend ---\n");
-    lumberjack::set_backend(&custom::backend);
-    
-    // Log messages with custom backend (stored in memory, not printed)
-    INFO("Message 4 - using custom backend (buffered)");
-    WARN("Message 5 - using custom backend (buffered)");
-    ERROR("Message 6 - using custom backend (buffered)");
-    
-    // Dump the buffer to see what was captured
-    custom::dump_buffer();
-    
-    // Clear buffer and log more messages
-    printf("--- Logging More Messages ---\n");
-    custom::clear_buffer();
-    
-    INFO("Message 7 - after buffer clear");
-    DEBUG("Message 8 - debug level (not visible at INFO level)");
-    
-    lumberjack::set_level(lumberjack::Level::Debug);
-    DEBUG("Message 9 - debug level (now visible)");
-    
-    custom::dump_buffer();
-    
-    // Demonstrate span timing with custom backend
-    printf("--- Span Timing with Custom Backend ---\n");
-    custom::clear_buffer();
-    
-    {
-        INFO_SPAN("custom_backend_span");
-        // Simulate some work
-        for (volatile int i = 0; i < 1000000; i++) {}
+void* span_begin(lumberjack::LogLevel, const char*) { return nullptr; }
+
+void span_end(void*, lumberjack::LogLevel level,
+              const char* name, long long elapsed_us) {
+    char msg[256];
+    snprintf(msg, sizeof(msg), "SPAN '%s' took %lld us", name, elapsed_us);
+    log_write(level, msg);
+}
+
+void dump() {
+    printf("\n  Memory backend (%zu messages):\n", g_messages.size());
+    for (size_t i = 0; i < g_messages.size(); i++)
+        printf("    %zu: %s\n", i + 1, g_messages[i].c_str());
+    printf("\n");
+}
+
+lumberjack::LogBackend backend = {
+    "memory", init, shutdown, log_write, span_begin, span_end
+};
+
+} // namespace memory_backend
+
+// =========================================================================
+// Example 2: High-performance file backend using WriteBuffer + TimestampCache
+// =========================================================================
+namespace fast_file_backend {
+
+static FILE*                     g_file = nullptr;
+static std::mutex                g_mutex;
+static lumberjack::WriteBuffer   g_buf;
+static lumberjack::TimestampCache g_ts;
+
+static const char* const g_levels[] = {"NONE", "ERROR", "WARN", "INFO", "DEBUG"};
+
+void init() {
+    // Open a log file (in a real app, make the path configurable)
+    g_file = fopen("app.log", "w");
+    if (!g_file) g_file = stderr;
+
+    // Enable buffered writes (16 KB) and timestamp caching (10 ms)
+    g_buf.enable(g_file, 16384);
+    g_ts.set_interval_ms(10);
+}
+
+void shutdown() {
+    std::lock_guard<std::mutex> lock(g_mutex);
+    g_buf.flush(g_file);
+    if (g_file && g_file != stderr) {
+        fclose(g_file);
+        g_file = nullptr;
     }
-    
-    custom::dump_buffer();
-    
-    // Switch back to builtin backend
-    printf("--- Switching Back to Builtin Backend ---\n");
+}
+
+void log_write(lumberjack::LogLevel level, const char* message) {
+    std::lock_guard<std::mutex> lock(g_mutex);
+
+    const char* ts = g_ts.get();
+    char line[1280];
+    int len = snprintf(line, sizeof(line), "[%s] [%s] %s\n",
+                       ts, g_levels[level], message);
+    if (len < 0) return;
+    if (static_cast<size_t>(len) >= sizeof(line)) len = sizeof(line) - 1;
+
+    g_buf.write(g_file, line, static_cast<size_t>(len));
+}
+
+void* span_begin(lumberjack::LogLevel, const char*) { return nullptr; }
+
+void span_end(void*, lumberjack::LogLevel level,
+              const char* name, long long elapsed_us) {
+    char msg[256];
+    snprintf(msg, sizeof(msg), "SPAN '%s' took %lld us", name, elapsed_us);
+    log_write(level, msg);
+}
+
+void flush() {
+    std::lock_guard<std::mutex> lock(g_mutex);
+    g_buf.flush(g_file);
+}
+
+lumberjack::LogBackend backend = {
+    "fast_file", init, shutdown, log_write, span_begin, span_end
+};
+
+} // namespace fast_file_backend
+
+// =========================================================================
+// Main
+// =========================================================================
+int main() {
+    // --- Example 1: Memory backend ---
+    printf("=== Example 1: Memory Backend ===\n");
+    lumberjack::init();
+    lumberjack::set_backend(&memory_backend::backend);
+    lumberjack::set_level(lumberjack::LOG_LEVEL_DEBUG);
+
+    LOG_INFO("Application started");
+    LOG_WARN("Low disk space: %d%% remaining", 12);
+    LOG_DEBUG("Cache hit ratio: %.2f", 0.87);
+
+    {
+        LOG_SPAN(lumberjack::LOG_LEVEL_INFO, "startup");
+        for (volatile int i = 0; i < 100000; i++) {}
+    }
+
+    memory_backend::dump();
+
+    // --- Example 2: Fast file backend ---
+    printf("=== Example 2: Fast File Backend (WriteBuffer + TimestampCache) ===\n");
+    lumberjack::set_backend(&fast_file_backend::backend);
+
+    LOG_INFO("Switched to fast file backend");
+    LOG_ERROR("Example error: %s", "disk full");
+
+    for (int i = 0; i < 100; i++) {
+        LOG_DEBUG("Batch message %d", i);
+    }
+
+    {
+        LOG_SPAN(lumberjack::LOG_LEVEL_INFO, "batch_processing");
+        for (volatile int i = 0; i < 500000; i++) {}
+    }
+
+    fast_file_backend::flush();
+
+    // Switch back to builtin to print final message to stderr
     lumberjack::set_backend(lumberjack::builtin_backend());
-    
-    INFO("Message 10 - back to builtin backend (stderr)");
-    INFO("Notice that shutdown() was called on custom backend");
-    
-    // Verify we're using builtin backend
-    lumberjack::LogBackend* current = lumberjack::get_backend();
-    printf("\nCurrent backend name: %s\n", current->name);
-    
-    INFO("\nExample complete!");
-    
+    LOG_INFO("Wrote log output to app.log");
+    LOG_INFO("Example complete");
+
     return 0;
 }

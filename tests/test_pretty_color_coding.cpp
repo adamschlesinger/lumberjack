@@ -107,5 +107,56 @@ int main() {
         std::cout << "PASSED: Log Level Color Mapping" << std::endl;
     }
 
+    // Feature: pretty-backend, Property 2: Color Reset After Output
+    // Validates: Requirements 1.5
+    // Property: For any log message or span marker output, the output SHALL
+    // end with the ANSI reset code to prevent color bleeding into subsequent
+    // terminal output.
+
+    std::cout << "Testing Property 2: Color Reset After Output..." << std::endl;
+
+    bool result2 = rc::check(
+        "Every log output line ends with ANSI reset code before the newline",
+        [&]() {
+            // Generate a random loggable level
+            auto level = *rc::gen::element(
+                lumberjack::LOG_LEVEL_ERROR,
+                lumberjack::LOG_LEVEL_WARN,
+                lumberjack::LOG_LEVEL_INFO,
+                lumberjack::LOG_LEVEL_DEBUG
+            );
+
+            // Generate a non-empty printable message
+            auto msg = *rc::gen::nonEmpty(
+                rc::gen::container<std::string>(
+                    rc::gen::inRange('a', 'z')
+                )
+            );
+
+            // Call log_write directly and capture stderr
+            std::string output = capture_stderr([&]() {
+                log_write(level, msg.c_str());
+            });
+
+            // The output must contain the ANSI reset code
+            std::string reset = "\033[0m";
+            RC_ASSERT(output.find(reset) != std::string::npos);
+
+            // The reset code must appear after the color code (i.e., at the end
+            // of the colored content, before the trailing newline)
+            auto reset_pos = output.rfind(reset);
+            // Everything after the reset should only be a newline
+            std::string after_reset = output.substr(reset_pos + reset.size());
+            RC_ASSERT(after_reset == "\n");
+        }
+    );
+
+    if (!result2) {
+        std::cout << "FAILED: Color Reset After Output" << std::endl;
+        success = false;
+    } else {
+        std::cout << "PASSED: Color Reset After Output" << std::endl;
+    }
+
     return success ? 0 : 1;
 }

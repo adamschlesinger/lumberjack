@@ -36,7 +36,7 @@ This plan implements the pretty backend for lumberjack in incremental steps, sta
     - **Property 1: Log Level Color Mapping**
     - **Validates: Requirements 1.1, 1.2, 1.3, 1.4**
   
-  - [ ]* 2.3 Write property test for color reset
+  - [x] 2.3 Write property test for color reset
     - **Property 2: Color Reset After Output**
     - **Validates: Requirements 1.5**
   

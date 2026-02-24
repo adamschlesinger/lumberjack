@@ -171,37 +171,37 @@ This implementation plan breaks down the lumberjack logging library into increme
     - Link examples against `lumberjack::lumberjack`
     - _Requirements: 9.3, 12.4_
 
-- [ ] 12. Create comprehensive test suite
-  - [ ] 12.1 Create `tests/test_levels.cpp`
+- [x] 12. Create comprehensive test suite
+  - [x] 12.1 Create `tests/test_levels.cpp`
     - Test level gating for all level combinations
     - Test LOG_LEVEL_NONE suppresses all output
     - Test level changes update function pointers correctly
     - _Requirements: 13.1_
 
-  - [ ] 12.2 Create `tests/test_backend_swap.cpp`
+  - [x] 12.2 Create `tests/test_backend_swap.cpp`
     - Test backend switching functionality
     - Test init/shutdown call ordering
     - Test get_backend returns correct pointer
     - _Requirements: 13.2_
 
-  - [ ] 12.3 Create `tests/test_spans.cpp`
+  - [x] 12.3 Create `tests/test_spans.cpp`
     - Test span timing accuracy
     - Test span callback invocation
     - Test span level gating
     - _Requirements: 13.3_
 
-  - [ ] 12.4 Create `tests/test_output.cpp`
+  - [x] 12.4 Create `tests/test_output.cpp`
     - Test output format validation
     - Test timestamp formatting
     - Test level string formatting
     - _Requirements: 13.4_
 
-  - [ ] 12.5 Create `tests/test_threads.cpp`
+  - [x] 12.5 Create `tests/test_threads.cpp`
     - Test concurrent logging from multiple threads
     - Verify no crashes or corruption
     - _Requirements: 13.5_
 
-  - [ ] 12.6 Add tests to CMake build
+  - [x] 12.6 Add tests to CMake build
     - Create `tests/CMakeLists.txt`
     - Conditionally build tests when `lumberjack_BUILD_TESTS` is ON
     - Link tests against `lumberjack::lumberjack` and Google Test

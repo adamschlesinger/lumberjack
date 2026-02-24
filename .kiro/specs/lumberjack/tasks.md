@@ -15,7 +15,7 @@ This implementation plan breaks down the lumberjack logging library into increme
   - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5, 8.7_
 
 - [ ] 2. Implement core header with types and interfaces
-  - [ ] 2.1 Create `include/lumberjack/lumberjack.h` with namespace and enums
+  - [x] 2.1 Create `include/lumberjack/lumberjack.h` with namespace and enums
     - Define `lumberjack` namespace
     - Define `LogLevel` enum (NONE, ERROR, WARN, INFO, DEBUG, LOG_COUNT)
     - Define `LogBackend` struct with function pointers (init, shutdown, log_write, span_begin, span_end)

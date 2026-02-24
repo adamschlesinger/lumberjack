@@ -32,7 +32,7 @@ This plan implements the pretty backend for lumberjack in incremental steps, sta
     - Write to stderr with fflush
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 8.1, 8.4, 8.5_
   
-  - [ ]* 2.2 Write property tests for color coding
+  - [x] 2.2 Write property tests for color coding
     - **Property 1: Log Level Color Mapping**
     - **Validates: Requirements 1.1, 1.2, 1.3, 1.4**
   

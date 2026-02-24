@@ -242,23 +242,23 @@ Performance comparison against a naive branching logger with equivalent base fea
 |----------|-------|------------|---------|
 | Single disabled call | 15 ns | 15 ns | ~same (both near zero) |
 | Disabled span | - | ~25 ns overhead | clock noop |
-| Tight loop (100 disabled) | 158 ns | 80 ns | ~2x faster |
+| Tight loop (100 disabled) | 161 ns | 80 ns | ~2x faster |
 
 **Enabled path**
 
 | Scenario | Naive | LJ Unbuffered | LJ Buf+Cache | Best Speedup |
 |----------|-------|---------------|--------------|--------------|
-| Single enabled call | 800 ns | 834 ns | 157 ns | 5.1x faster |
-| 100 enabled calls | 76,136 ns | 81,864 ns | 12,998 ns | 5.9x faster |
-| Mixed (3 en + 2 dis) | 2,339 ns | 2,460 ns | 413 ns | 5.7x faster |
-| Enabled span | - | - | 218 ns | - |
+| Single enabled call | 797 ns | 836 ns | 158 ns | 5.0x faster |
+| 100 enabled calls | 76,022 ns | 80,800 ns | 12,843 ns | 5.9x faster |
+| Mixed (3 en + 2 dis) | 2,340 ns | 2,480 ns | 422 ns | 5.5x faster |
+| Enabled span | - | - | 220 ns | - |
 
 **Sequence number overhead (buf+cache, 100 enabled calls)**
 
 | Scenario | Mean | Per-call overhead |
 |----------|------|-------------------|
-| Seq OFF | 12,887 ns | — |
-| Seq ON | 14,873 ns | ~20 ns |
+| Seq OFF | 12,630 ns | — |
+| Seq ON | 14,484 ns | ~19 ns |
 
 **Key Insights:**
 
@@ -266,7 +266,7 @@ Performance comparison against a naive branching logger with equivalent base fea
 - Disabled spans cost ~25 ns thanks to clock function pointer dispatch (no `steady_clock::now()` calls).
 - Unbuffered Lumberjack performs ~same as the naive logger (~0.96x) since I/O dominates.
 - Buffered writes + cached timestamps deliver a 5-6x speedup by eliminating per-call `fflush()` and amortizing `localtime`/`strftime` cost.
-- Sequence numbers add ~20 ns per call when enabled — negligible relative to the buf+cache baseline. Disabled by default.
+- Sequence numbers add ~19 ns per call when enabled — negligible relative to the buf+cache baseline. Disabled by default.
 - All optimizations are runtime-switchable — no recompilation needed.
 
 Run the benchmark yourself:

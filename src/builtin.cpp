@@ -34,18 +34,18 @@ static void builtin_shutdown() {
 static void builtin_log_write(LogLevel level, const char* message) {
     std::lock_guard<std::mutex> lock(g_mutex);
 
-    bool refreshed = false;
-    const char* ts = g_tsCache.get(&refreshed);
     const char* level_str = g_levelStrings[level];
-
-    if (refreshed) g_seqCounter = 0;
 
     char line[1280];
     int len;
     if (g_seqEnabled) {
+        bool refreshed = false;
+        const char* ts = g_tsCache.get(&refreshed);
+        if (refreshed) g_seqCounter = 0;
         len = snprintf(line, sizeof(line), "[%s] [%s] #%lu %s\n",
                        ts, level_str, g_seqCounter++, message);
     } else {
+        const char* ts = g_tsCache.get();
         len = snprintf(line, sizeof(line), "[%s] [%s] %s\n", ts, level_str, message);
     }
     if (len < 0) return;

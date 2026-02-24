@@ -24,7 +24,7 @@ This plan implements the pretty backend for lumberjack in incremental steps, sta
   - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5_
 
 - [ ] 2. Implement basic log_write with color coding
-  - [ ] 2.1 Implement `pretty_log_write()` function
+  - [x] 2.1 Implement `pretty_log_write()` function
     - Add global mutex `g_output_mutex` for thread-safe output
     - Format output as "[LEVEL] message" without timestamps
     - Apply color codes based on log level using `level_to_color()`

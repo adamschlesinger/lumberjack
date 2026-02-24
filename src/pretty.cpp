@@ -52,7 +52,16 @@ static void pretty_shutdown() {
 }
 
 static void pretty_log_write(LogLevel level, const char* message) {
-    // Stub: Basic implementation will be added in task 2
+    std::lock_guard<std::mutex> lock(g_output_mutex);
+    
+    // Get color for level
+    const char* color = level_to_color(level);
+    const char* level_str = level_to_string(level);
+    
+    // Output: [LEVEL] message (with color)
+    fprintf(stderr, "%s[%s] %s%s\n", 
+            color, level_str, message, COLOR_RESET);
+    fflush(stderr);
 }
 
 static void* pretty_span_begin(LogLevel level, const char* name) {

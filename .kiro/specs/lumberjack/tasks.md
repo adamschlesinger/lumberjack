@@ -68,7 +68,7 @@ This implementation plan breaks down the lumberjack logging library into increme
     - **Property 2: Backend Round-Trip Consistency**
     - **Validates: Requirements 3.3, 3.6**
 
-- [ ] 5. Checkpoint - Ensure core dispatch compiles
+- [x] 5. Checkpoint - Ensure core dispatch compiles
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 6. Implement built-in backend

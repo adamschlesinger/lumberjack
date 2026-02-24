@@ -72,7 +72,7 @@ This implementation plan breaks down the lumberjack logging library into increme
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 6. Implement built-in backend
-  - [ ] 6.1 Create `src/builtin.cpp` with backend implementation
+  - [x] 6.1 Create `src/builtin.cpp` with backend implementation
     - Define static `g_output` (default stderr) and `g_mutex` for thread safety
     - Implement `builtin_init()` (no-op)
     - Implement `builtin_shutdown()` (reset to stderr)

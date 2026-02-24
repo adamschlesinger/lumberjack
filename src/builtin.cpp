@@ -70,4 +70,17 @@ static void builtin_span_end(void* handle, LogLevel level,
     builtin_log_write(level, message);
 }
 
+// Built-in backend accessor
+LogBackend* builtin_backend() {
+    static LogBackend backend = {
+        "builtin",
+        builtin_init,
+        builtin_shutdown,
+        builtin_log_write,
+        builtin_span_begin,
+        builtin_span_end
+    };
+    return &backend;
+}
+
 } // namespace lumberjack

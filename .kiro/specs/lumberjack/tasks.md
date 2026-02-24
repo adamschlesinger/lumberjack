@@ -81,7 +81,7 @@ This implementation plan breaks down the lumberjack logging library into increme
     - Use `std::chrono` for timestamps, `fprintf` for output
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.6, 11.2_
 
-  - [ ] 6.2 Implement `builtin_backend()` accessor
+  - [x] 6.2 Implement `builtin_backend()` accessor
     - Return pointer to static `LogBackend` struct with builtin function pointers
     - Set name field to "builtin"
     - _Requirements: 3.2, 4.2, 5.1_

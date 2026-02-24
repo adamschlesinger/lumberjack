@@ -118,7 +118,7 @@ This implementation plan breaks down the lumberjack logging library into increme
     - **Property 5: Span Lifecycle Callbacks**
     - **Validates: Requirements 6.2, 6.3**
 
-  - [ ]* 7.5 Write property test for span level gating
+  - [x] 7.5 Write property test for span level gating
     - **Property 6: Span Level Gating**
     - **Validates: Requirements 6.5**
 

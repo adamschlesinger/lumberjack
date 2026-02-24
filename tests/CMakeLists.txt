@@ -30,6 +30,9 @@ target_link_libraries(test_span_callbacks PRIVATE lumberjack::lumberjack)
 add_executable(test_span_lifecycle test_span_lifecycle.cpp)
 target_link_libraries(test_span_lifecycle PRIVATE lumberjack::lumberjack rapidcheck)
 
+add_executable(test_span_level_gating test_span_level_gating.cpp)
+target_link_libraries(test_span_level_gating PRIVATE lumberjack::lumberjack rapidcheck)
+
 enable_testing()
 add_test(NAME LogLevelOrdering COMMAND test_log_level_ordering)
 add_test(NAME LogLevelGating COMMAND test_log_level_gating)
@@ -38,5 +41,6 @@ add_test(NAME BuiltinOutput COMMAND test_builtin_output)
 add_test(NAME BackendMessageDelivery COMMAND test_backend_message_delivery)
 add_test(NAME SpanCallbacks COMMAND test_span_callbacks)
 add_test(NAME SpanLifecycle COMMAND test_span_lifecycle)
+add_test(NAME SpanLevelGating COMMAND test_span_level_gating)
 
 # Additional tests will be added in task 12

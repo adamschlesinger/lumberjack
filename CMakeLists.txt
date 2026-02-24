@@ -9,6 +9,7 @@ option(lumberjack_BUILD_TESTS "Build test suite" OFF)
 add_library(lumberjack STATIC
     src/core.cpp
     src/builtin.cpp
+    src/pretty.cpp
 )
 
 # Create alias for namespaced target

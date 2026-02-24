@@ -6,7 +6,7 @@ This plan implements the pretty backend for lumberjack in incremental steps, sta
 
 ## Tasks
 
-- [ ] 1. Create pretty backend file structure and basic scaffolding
+- [x] 1. Create pretty backend file structure and basic scaffolding
   - Create `src/pretty.cpp` with namespace and includes
   - Define ANSI color code constants (COLOR_RESET, COLOR_RED, COLOR_YELLOW, COLOR_GREEN, COLOR_BLUE)
   - Implement `level_to_color()` helper function to map LogLevel to color codes

@@ -102,6 +102,7 @@ LogBackend* get_backend();
 // Returns the built-in stderr logging backend. This is the default backend
 // installed by init(). Output format: [timestamp] [LEVEL] message
 LogBackend* builtin_backend();
+LogBackend* pretty_backend();
 
 // Redirects built-in backend output to the given FILE stream.
 // Flushes any pending buffered data before switching.

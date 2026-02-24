@@ -34,7 +34,7 @@ This implementation plan breaks down the lumberjack logging library into increme
   - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.6, 1.2_
 
 - [ ] 4. Implement core logger dispatch mechanism
-  - [ ] 4.1 Create `src/core.cpp` with global state
+  - [x] 4.1 Create `src/core.cpp` with global state
     - Define `g_logFunctions` array initialized to `log_noop`
     - Define `g_currentLevel` initialized to `LOG_LEVEL_INFO`
     - Define `g_activeBackend` pointer

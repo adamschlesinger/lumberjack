@@ -1,1 +1,87 @@
-// Placeholder for core.cpp - will be implemented in task 4
+#include "lumberjack/lumberjack.h"
+#include <cstdarg>
+#include <cstdio>
+#include <cstring>
+
+namespace lumberjack {
+
+// Forward declarations
+static void log_noop(LogLevel level, const char* fmt, ...);
+static void log_dispatch(LogLevel level, const char* fmt, ...);
+static const char* level_to_string(LogLevel level);
+
+// Global state
+LogFunction g_logFunctions[LOG_COUNT] = {
+    log_noop,  // LOG_LEVEL_NONE
+    log_noop,  // LOG_LEVEL_ERROR
+    log_noop,  // LOG_LEVEL_WARN
+    log_noop,  // LOG_LEVEL_INFO
+    log_noop   // LOG_LEVEL_DEBUG
+};
+
+static LogLevel g_currentLevel = LOG_LEVEL_INFO;
+static LogBackend* g_activeBackend = nullptr;
+
+// No-op function for disabled log levels
+static void log_noop(LogLevel level, const char* fmt, ...) {
+    // Empty, immediate return for performance
+}
+
+// Active dispatch function that formats and sends to backend
+static void log_dispatch(LogLevel level, const char* fmt, ...) {
+    if (!g_activeBackend || !g_activeBackend->log_write) {
+        return;
+    }
+    
+    // Format the message using vsnprintf
+    char buffer[1024];
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(buffer, sizeof(buffer), fmt, args);
+    va_end(args);
+    
+    // Call backend with formatted message
+    g_activeBackend->log_write(level, buffer);
+}
+
+// Helper function to convert log level to string
+static const char* level_to_string(LogLevel level) {
+    switch (level) {
+        case LOG_LEVEL_NONE:  return "NONE";
+        case LOG_LEVEL_ERROR: return "ERROR";
+        case LOG_LEVEL_WARN:  return "WARN";
+        case LOG_LEVEL_INFO:  return "INFO";
+        case LOG_LEVEL_DEBUG: return "DEBUG";
+        default:              return "UNKNOWN";
+    }
+}
+
+// Public API implementations (stubs for now, will be implemented in later tasks)
+void init() {
+    // Will be implemented in task 4.4
+}
+
+void set_level(LogLevel level) {
+    // Will be implemented in task 4.2
+}
+
+LogLevel get_level() {
+    // Will be implemented in task 4.3
+    return g_currentLevel;
+}
+
+void set_backend(LogBackend* backend) {
+    // Will be implemented in task 4.3
+}
+
+LogBackend* get_backend() {
+    // Will be implemented in task 4.3
+    return g_activeBackend;
+}
+
+LogBackend* builtin_backend() {
+    // Will be implemented in task 6.2
+    return nullptr;
+}
+
+} // namespace lumberjack

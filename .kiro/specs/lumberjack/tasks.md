@@ -23,7 +23,7 @@ This implementation plan breaks down the lumberjack logging library into increme
     - Declare `LogFunction` type alias and extern `g_logFunctions` array
     - _Requirements: 1.1, 2.1, 3.1, 3.2, 5.4, 8.7, 15.1, 15.2, 15.3_
 
-  - [ ]* 2.2 Write property test for LogLevel enum ordering
+  - [x] 2.2 Write property test for LogLevel enum ordering
     - **Property: Log Level Ordering Invariant**
     - **Validates: Requirements 2.1**
 

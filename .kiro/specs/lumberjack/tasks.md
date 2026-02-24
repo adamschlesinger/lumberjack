@@ -105,7 +105,7 @@ This implementation plan breaks down the lumberjack logging library into increme
     - Store: level, name, handle, start time, active flag
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 14.5, 15.4_
 
-  - [ ] 7.2 Create `LOG_SPAN` macro
+  - [x] 7.2 Create `LOG_SPAN` macro
     - Expand to: `lumberjack::Span _log_span_##__LINE__(level, name)`
     - _Requirements: 6.1, 10.5_
 

@@ -76,5 +76,6 @@ private:
     lumberjack::g_logFunctions[lumberjack::LOG_LEVEL_INFO](lumberjack::LOG_LEVEL_INFO, fmt, ##__VA_ARGS__)
 #define LOG_DEBUG(fmt, ...) \
     lumberjack::g_logFunctions[lumberjack::LOG_LEVEL_DEBUG](lumberjack::LOG_LEVEL_DEBUG, fmt, ##__VA_ARGS__)
+#define LOG_SPAN(level, name) lumberjack::Span _log_span_##__LINE__(level, name)
 
 #endif // LUMBERJACK_H

@@ -3,100 +3,75 @@
 #include <cstdio>
 #include <cstdarg>
 #include <ctime>
+#include <cmath>
 #include <vector>
 #include <numeric>
 #include <algorithm>
 #include <mutex>
+#include <thread>
 
-// Traditional branching logger for comparison
-// Matches Lumberjack's builtin backend features: timestamps, mutex, formatting, flushing
-class BranchingLogger {
+// =========================================================================
+// Naive branching logger for comparison
+// A straightforward logger with timestamps, mutex, formatting, and flushing.
+// No optimizations — represents a typical hand-rolled logger.
+// =========================================================================
+class NaiveLogger {
 public:
     enum Level { ERROR = 1, WARN = 2, INFO = 3, DEBUG = 4 };
-    
-    BranchingLogger() : m_level(INFO), m_output(stderr) {}
-    
+
+    NaiveLogger() : m_level(INFO), m_output(stderr) {}
+
     void set_level(Level level) { m_level = level; }
     void set_output(FILE* output) { m_output = output; }
-    
+
     void log_error(const char* fmt, ...) {
-        if (m_level >= ERROR) {
-            va_list args;
-            va_start(args, fmt);
-            log_with_formatting(ERROR, fmt, args);
-            va_end(args);
-        }
+        if (m_level >= ERROR) { va_list a; va_start(a, fmt); write(ERROR, fmt, a); va_end(a); }
     }
-    
     void log_warn(const char* fmt, ...) {
-        if (m_level >= WARN) {
-            va_list args;
-            va_start(args, fmt);
-            log_with_formatting(WARN, fmt, args);
-            va_end(args);
-        }
+        if (m_level >= WARN) { va_list a; va_start(a, fmt); write(WARN, fmt, a); va_end(a); }
     }
-    
     void log_info(const char* fmt, ...) {
-        if (m_level >= INFO) {
-            va_list args;
-            va_start(args, fmt);
-            log_with_formatting(INFO, fmt, args);
-            va_end(args);
-        }
+        if (m_level >= INFO) { va_list a; va_start(a, fmt); write(INFO, fmt, a); va_end(a); }
     }
-    
     void log_debug(const char* fmt, ...) {
-        if (m_level >= DEBUG) {
-            va_list args;
-            va_start(args, fmt);
-            log_with_formatting(DEBUG, fmt, args);
-            va_end(args);
-        }
+        if (m_level >= DEBUG) { va_list a; va_start(a, fmt); write(DEBUG, fmt, a); va_end(a); }
     }
-    
+
 private:
     Level m_level;
     FILE* m_output;
     std::mutex m_mutex;
-    
-    const char* level_to_string(Level level) {
-        switch (level) {
-            case ERROR: return "ERROR";
-            case WARN:  return "WARN";
-            case INFO:  return "INFO";
-            case DEBUG: return "DEBUG";
-            default:    return "UNKNOWN";
+
+    const char* level_str(Level l) {
+        switch (l) {
+            case ERROR: return "ERROR"; case WARN: return "WARN";
+            case INFO:  return "INFO";  case DEBUG: return "DEBUG";
+            default: return "?";
         }
     }
-    
-    void log_with_formatting(Level level, const char* fmt, va_list args) {
+
+    void write(Level level, const char* fmt, va_list args) {
         std::lock_guard<std::mutex> lock(m_mutex);
-        
-        // Format the message
         char message[1024];
         vsnprintf(message, sizeof(message), fmt, args);
-        
-        // Get current timestamp
+
         auto now = std::chrono::system_clock::now();
-        auto time_t_now = std::chrono::system_clock::to_time_t(now);
-        auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+        auto tt  = std::chrono::system_clock::to_time_t(now);
+        auto ms  = std::chrono::duration_cast<std::chrono::milliseconds>(
             now.time_since_epoch()) % 1000;
-        
-        // Format timestamp: [YYYY-MM-DD HH:MM:SS.mmm]
-        char timestamp[32];
-        std::strftime(timestamp, sizeof(timestamp), "%Y-%m-%d %H:%M:%S", 
-                      std::localtime(&time_t_now));
-        
-        // Write formatted message: [YYYY-MM-DD HH:MM:SS.mmm] [LEVEL] message
-        fprintf(m_output, "[%s.%03lld] [%s] %s\n", 
-                timestamp, static_cast<long long>(ms.count()), 
-                level_to_string(level), message);
+
+        char ts[32];
+        std::strftime(ts, sizeof(ts), "%Y-%m-%d %H:%M:%S", std::localtime(&tt));
+
+        fprintf(m_output, "[%s.%03lld] [%s] %s\n",
+                ts, static_cast<long long>(ms.count()), level_str(level), message);
         fflush(m_output);
     }
 };
 
+// =========================================================================
 // Benchmark utilities
+// =========================================================================
 struct BenchmarkResult {
     const char* name;
     double mean_ns;
@@ -110,230 +85,260 @@ template<typename Func>
 BenchmarkResult benchmark(const char* name, Func&& func, int iterations, int warmup = 1000) {
     std::vector<double> timings;
     timings.reserve(iterations);
-    
-    // Warmup
-    for (int i = 0; i < warmup; ++i) {
-        func();
-    }
-    
-    // Actual measurements
+
+    for (int i = 0; i < warmup; ++i) func();
+
     for (int i = 0; i < iterations; ++i) {
         auto start = std::chrono::high_resolution_clock::now();
         func();
         auto end = std::chrono::high_resolution_clock::now();
-        
-        auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-        timings.push_back(static_cast<double>(duration));
+        timings.push_back(static_cast<double>(
+            std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count()));
     }
-    
-    // Calculate statistics
+
     std::sort(timings.begin(), timings.end());
-    
-    double sum = std::accumulate(timings.begin(), timings.end(), 0.0);
-    double mean = sum / timings.size();
+    double sum    = std::accumulate(timings.begin(), timings.end(), 0.0);
+    double mean   = sum / timings.size();
     double median = timings[timings.size() / 2];
-    double min = timings.front();
-    double max = timings.back();
-    
     double sq_sum = 0.0;
-    for (double t : timings) {
-        sq_sum += (t - mean) * (t - mean);
-    }
-    double stddev = std::sqrt(sq_sum / timings.size());
-    
-    return {name, mean, median, min, max, stddev};
+    for (double t : timings) sq_sum += (t - mean) * (t - mean);
+
+    return {name, mean, median, timings.front(), timings.back(),
+            std::sqrt(sq_sum / timings.size())};
 }
 
-void print_result(const BenchmarkResult& result) {
-    printf("%-50s | Mean: %8.2f ns | Median: %8.2f ns | Min: %8.2f ns | Max: %8.2f ns | StdDev: %8.2f ns\n",
-           result.name, result.mean_ns, result.median_ns, result.min_ns, result.max_ns, result.stddev_ns);
+void print_result(const BenchmarkResult& r) {
+    printf("  %-52s Mean: %9.1f ns  Median: %9.1f ns  Min: %8.1f ns\n",
+           r.name, r.mean_ns, r.median_ns, r.min_ns);
 }
 
-void print_comparison(const BenchmarkResult& baseline, const BenchmarkResult& comparison) {
-    double speedup = baseline.mean_ns / comparison.mean_ns;
-    printf("  → %s is %.2fx %s than %s\n\n",
-           comparison.name,
-           std::abs(speedup),
-           speedup > 1.0 ? "faster" : "slower",
-           baseline.name);
+void print_comparison(const BenchmarkResult& baseline, const BenchmarkResult& test) {
+    double speedup = baseline.mean_ns / test.mean_ns;
+    printf("    -> %s is %.2fx %s than %s\n",
+           test.name, std::abs(speedup),
+           speedup > 1.0 ? "faster" : "slower", baseline.name);
 }
 
-void print_comparison_with_empty(const BenchmarkResult& empty, const BenchmarkResult& baseline, const BenchmarkResult& comparison) {
-    double overhead_baseline = baseline.mean_ns - empty.mean_ns;
-    double overhead_comparison = comparison.mean_ns - empty.mean_ns;
-    double speedup = baseline.mean_ns / comparison.mean_ns;
-    
-    printf("  Empty (compiled out): %.2f ns\n", empty.mean_ns);
-    printf("  %s overhead: %.2f ns (%.2fx of empty)\n", baseline.name, overhead_baseline, baseline.mean_ns / empty.mean_ns);
-    printf("  %s overhead: %.2f ns (%.2fx of empty)\n", comparison.name, overhead_comparison, comparison.mean_ns / empty.mean_ns);
-    printf("  → %s is %.2fx %s than %s\n\n",
-           comparison.name,
-           std::abs(speedup),
-           speedup > 1.0 ? "faster" : "slower",
-           baseline.name);
-}
-
+// =========================================================================
+// Main
+// =========================================================================
 int main() {
-    const int iterations = 1000000;
-    
-    printf("=== Lumberjack Performance Comparison ===\n");
-    printf("Iterations: %d\n\n", iterations);
-    
-    // Initialize both loggers with /dev/null to ensure fair comparison
+    const int N = 1000000;
+
+    printf("=============================================================\n");
+    printf("  Lumberjack Performance Benchmark\n");
+    printf("  Iterations: %d\n", N);
+    printf("=============================================================\n\n");
+
     FILE* devnull = fopen("/dev/null", "w");
-    
+    NaiveLogger naive;
+    naive.set_output(devnull);
+
     lumberjack::init();
     lumberjack::builtin_set_output(devnull);
-    
-    BranchingLogger branching_logger;
-    branching_logger.set_output(devnull);
-    
-    printf("--- Test 1: Disabled Log Levels (Most Common Case) ---\n");
-    printf("Testing DEBUG logs when level is set to INFO (logs should be suppressed)\n\n");
-    
-    // Set both loggers to INFO level (DEBUG is disabled)
+
+    // =================================================================
+    // TEST 1: Disabled log levels (most common production case)
+    // =================================================================
+    printf("--- Test 1: Single Disabled Call (DEBUG when level=INFO) ---\n");
     lumberjack::set_level(lumberjack::LOG_LEVEL_INFO);
-    branching_logger.set_level(BranchingLogger::INFO);
-    
-    auto empty_disabled = benchmark("Empty (no-op)", [&]() {
-        // Literally nothing - simulates compiled-out logging
-    }, iterations);
-    
-    auto lj_disabled = benchmark("Lumberjack (disabled)", [&]() {
-        LOG_DEBUG("Debug message: %d %s", 42, "test");
-    }, iterations);
-    
-    auto br_disabled = benchmark("Branching (disabled)", [&]() {
-        branching_logger.log_debug("Debug message: %d %s", 42, "test");
-    }, iterations);
-    
-    print_result(empty_disabled);
-    print_result(lj_disabled);
-    print_result(br_disabled);
-    print_comparison_with_empty(empty_disabled, br_disabled, lj_disabled);
-    
-    printf("--- Test 2: Enabled Log Levels ---\n");
-    printf("Testing INFO logs when level is set to INFO (logs are active)\n\n");
-    
-    auto lj_enabled = benchmark("Lumberjack (enabled)", [&]() {
-        LOG_INFO("Info message: %d %s", 42, "test");
-    }, iterations);
-    
-    auto br_enabled = benchmark("Branching (enabled)", [&]() {
-        branching_logger.log_info("Info message: %d %s", 42, "test");
-    }, iterations);
-    
-    print_result(lj_enabled);
-    print_result(br_enabled);
-    print_comparison(br_enabled, lj_enabled);
-    
-    printf("--- Test 3: Mixed Workload (Realistic Scenario) ---\n");
-    printf("Mix of enabled and disabled log levels\n\n");
-    
-    auto lj_mixed = benchmark("Lumberjack (mixed)", [&]() {
-        LOG_ERROR("Error: %d", 1);
-        LOG_WARN("Warning: %d", 2);
-        LOG_INFO("Info: %d", 3);
-        LOG_DEBUG("Debug: %d", 4);  // Disabled
-        LOG_DEBUG("Debug: %d", 5);  // Disabled
-    }, iterations);
-    
-    auto br_mixed = benchmark("Branching (mixed)", [&]() {
-        branching_logger.log_error("Error: %d", 1);
-        branching_logger.log_warn("Warning: %d", 2);
-        branching_logger.log_info("Info: %d", 3);
-        branching_logger.log_debug("Debug: %d", 4);  // Disabled
-        branching_logger.log_debug("Debug: %d", 5);  // Disabled
-    }, iterations);
-    
-    print_result(lj_mixed);
-    print_result(br_mixed);
-    print_comparison(br_mixed, lj_mixed);
-    
+    naive.set_level(NaiveLogger::INFO);
+
+    auto empty = benchmark("Empty (compiled-out baseline)", [&]() {}, N);
+    auto naive_dis = benchmark("Naive (disabled)", [&]() {
+        naive.log_debug("Debug: %d %s", 42, "test");
+    }, N);
+    auto lj_dis = benchmark("Lumberjack (disabled)", [&]() {
+        LOG_DEBUG("Debug: %d %s", 42, "test");
+    }, N);
+
+    print_result(empty);
+    print_result(naive_dis);
+    print_result(lj_dis);
+    print_comparison(naive_dis, lj_dis);
+    printf("\n");
+
+    // =================================================================
+    // TEST 2: Disabled spans (clock noop optimization)
+    // =================================================================
+    printf("--- Test 2: Disabled Span (LOG_SPAN at DEBUG when level=INFO) ---\n");
+
+    auto span_empty = benchmark("Empty (baseline)", [&]() {}, N);
+    auto span_dis = benchmark("Lumberjack Span (disabled)", [&]() {
+        LOG_SPAN(lumberjack::LOG_LEVEL_DEBUG, "noop_span");
+    }, N);
+
+    print_result(span_empty);
+    print_result(span_dis);
+    printf("    -> Overhead per disabled span: %.1f ns\n\n",
+           span_dis.mean_ns - span_empty.mean_ns);
+
+    // =================================================================
+    // TEST 3: Enabled single call
+    // =================================================================
+    printf("--- Test 3: Single Enabled Call (INFO) — Backend Modes ---\n");
+    lumberjack::set_level(lumberjack::LOG_LEVEL_INFO);
+
+    auto naive_en = benchmark("Naive (enabled)", [&]() {
+        naive.log_info("Info: %d %s", 42, "test");
+    }, N);
+
+    // Lumberjack: unbuffered (original behavior)
+    lumberjack::builtin_set_buffered(false);
+    lumberjack::builtin_set_timestamp_cache_ms(0);
+    auto lj_unbuf = benchmark("Lumberjack unbuffered", [&]() {
+        LOG_INFO("Info: %d %s", 42, "test");
+    }, N);
+
+    // Lumberjack: buffered + cached timestamp
+    lumberjack::builtin_set_buffered(true, 8192);
+    lumberjack::builtin_set_timestamp_cache_ms(10);
+    auto lj_buf_cache = benchmark("Lumberjack buf+cache", [&]() {
+        LOG_INFO("Info: %d %s", 42, "test");
+    }, N);
+    lumberjack::builtin_flush();
+
+    print_result(naive_en);
+    print_result(lj_unbuf);
+    print_result(lj_buf_cache);
+    print_comparison(naive_en, lj_unbuf);
+    print_comparison(naive_en, lj_buf_cache);
+    printf("\n");
+
+    // =================================================================
+    // TEST 4: Tight loop — 100 disabled calls
+    // =================================================================
     printf("--- Test 4: Tight Loop (100 Disabled Calls) ---\n");
-    printf("Repeated calls to same log level (best case for branch prediction)\n\n");
-    
+    lumberjack::builtin_set_buffered(false);
+    lumberjack::builtin_set_timestamp_cache_ms(0);
     lumberjack::set_level(lumberjack::LOG_LEVEL_INFO);
-    branching_logger.set_level(BranchingLogger::INFO);
-    
-    auto empty_loop = benchmark("Empty (no-op loop)", [&]() {
-        for (int i = 0; i < 100; ++i) {
-            // Literally nothing - simulates compiled-out logging
-        }
-    }, iterations / 100);
-    
-    auto lj_loop = benchmark("Lumberjack (tight loop)", [&]() {
-        for (int i = 0; i < 100; ++i) {
-            LOG_DEBUG("Debug: %d", i);  // All disabled
-        }
-    }, iterations / 100);  // Fewer iterations since we're doing 100 calls each
-    
-    auto br_loop = benchmark("Branching (tight loop)", [&]() {
-        for (int i = 0; i < 100; ++i) {
-            branching_logger.log_debug("Debug: %d", i);  // All disabled
-        }
-    }, iterations / 100);
-    
-    print_result(empty_loop);
-    print_result(lj_loop);
-    print_result(br_loop);
-    print_comparison_with_empty(empty_loop, br_loop, lj_loop);
-    
-    printf("--- Test 5: Tight Loop Mixed (60 Disabled + 40 Enabled) ---\n");
-    printf("Realistic hot path with some enabled logging\n\n");
-    
-    auto lj_loop_mixed = benchmark("Lumberjack (mixed loop)", [&]() {
-        for (int i = 0; i < 100; ++i) {
-            if (i % 5 < 2) {
-                LOG_INFO("Info: %d", i);  // 40% enabled
-            } else {
-                LOG_DEBUG("Debug: %d", i);  // 60% disabled
-            }
-        }
-    }, iterations / 100);
-    
-    auto br_loop_mixed = benchmark("Branching (mixed loop)", [&]() {
-        for (int i = 0; i < 100; ++i) {
-            if (i % 5 < 2) {
-                branching_logger.log_info("Info: %d", i);  // 40% enabled
-            } else {
-                branching_logger.log_debug("Debug: %d", i);  // 60% disabled
-            }
-        }
-    }, iterations / 100);
-    
-    print_result(lj_loop_mixed);
-    print_result(br_loop_mixed);
-    print_comparison(br_loop_mixed, lj_loop_mixed);
-    
-    printf("--- Test 6: Tight Loop (100 Enabled Calls) ---\n");
-    printf("All logs active - tests overhead when logging is fully enabled\n\n");
-    
-    auto lj_loop_enabled = benchmark("Lumberjack (enabled loop)", [&]() {
-        for (int i = 0; i < 100; ++i) {
-            LOG_INFO("Info: %d", i);  // All enabled
-        }
-    }, iterations / 100);
-    
-    auto br_loop_enabled = benchmark("Branching (enabled loop)", [&]() {
-        for (int i = 0; i < 100; ++i) {
-            branching_logger.log_info("Info: %d", i);  // All enabled
-        }
-    }, iterations / 100);
-    
-    print_result(lj_loop_enabled);
-    print_result(br_loop_enabled);
-    print_comparison(br_loop_enabled, lj_loop_enabled);
-    
+    naive.set_level(NaiveLogger::INFO);
+
+    auto loop_empty = benchmark("Empty loop", [&]() {
+        for (int i = 0; i < 100; ++i) { }
+    }, N / 100);
+
+    auto loop_naive = benchmark("Naive (100 disabled)", [&]() {
+        for (int i = 0; i < 100; ++i)
+            naive.log_debug("Debug: %d", i);
+    }, N / 100);
+
+    auto loop_lj = benchmark("Lumberjack (100 disabled)", [&]() {
+        for (int i = 0; i < 100; ++i)
+            LOG_DEBUG("Debug: %d", i);
+    }, N / 100);
+
+    print_result(loop_empty);
+    print_result(loop_naive);
+    print_result(loop_lj);
+    print_comparison(loop_naive, loop_lj);
+    printf("\n");
+
+    // =================================================================
+    // TEST 5: Tight loop — 100 enabled calls
+    // =================================================================
+    printf("--- Test 5: Tight Loop (100 Enabled Calls) — Backend Modes ---\n");
+
+    auto loop_naive_en = benchmark("Naive (100 enabled)", [&]() {
+        for (int i = 0; i < 100; ++i)
+            naive.log_info("Info: %d", i);
+    }, N / 100);
+
+    // Lumberjack: unbuffered
+    lumberjack::builtin_set_buffered(false);
+    lumberjack::builtin_set_timestamp_cache_ms(0);
+    auto loop_lj_unbuf = benchmark("Lumberjack unbuf (100 en)", [&]() {
+        for (int i = 0; i < 100; ++i)
+            LOG_INFO("Info: %d", i);
+    }, N / 100);
+
+    // Lumberjack: buffered + cached timestamp
+    lumberjack::builtin_set_buffered(true, 16384);
+    lumberjack::builtin_set_timestamp_cache_ms(10);
+    auto loop_lj_full = benchmark("Lumberjack buf+cache (100 en)", [&]() {
+        for (int i = 0; i < 100; ++i)
+            LOG_INFO("Info: %d", i);
+    }, N / 100);
+    lumberjack::builtin_flush();
+
+    print_result(loop_naive_en);
+    print_result(loop_lj_unbuf);
+    print_result(loop_lj_full);
+    print_comparison(loop_naive_en, loop_lj_unbuf);
+    print_comparison(loop_naive_en, loop_lj_full);
+    printf("\n");
+
+    // =================================================================
+    // TEST 6: Mixed workload
+    // =================================================================
+    printf("--- Test 6: Mixed Workload (3 enabled + 2 disabled) ---\n");
+    lumberjack::set_level(lumberjack::LOG_LEVEL_INFO);
+
+    auto mix_naive = benchmark("Naive (mixed)", [&]() {
+        naive.log_error("Error: %d", 1);
+        naive.log_warn("Warn: %d", 2);
+        naive.log_info("Info: %d", 3);
+        naive.log_debug("Debug: %d", 4);
+        naive.log_debug("Debug: %d", 5);
+    }, N);
+
+    // Lumberjack: unbuffered
+    lumberjack::builtin_set_buffered(false);
+    lumberjack::builtin_set_timestamp_cache_ms(0);
+    auto mix_lj = benchmark("Lumberjack unbuffered (mixed)", [&]() {
+        LOG_ERROR("Error: %d", 1);
+        LOG_WARN("Warn: %d", 2);
+        LOG_INFO("Info: %d", 3);
+        LOG_DEBUG("Debug: %d", 4);
+        LOG_DEBUG("Debug: %d", 5);
+    }, N);
+
+    // Lumberjack: optimized
+    lumberjack::builtin_set_buffered(true, 8192);
+    lumberjack::builtin_set_timestamp_cache_ms(10);
+    auto mix_lj_opt = benchmark("Lumberjack buf+cache (mixed)", [&]() {
+        LOG_ERROR("Error: %d", 1);
+        LOG_WARN("Warn: %d", 2);
+        LOG_INFO("Info: %d", 3);
+        LOG_DEBUG("Debug: %d", 4);
+        LOG_DEBUG("Debug: %d", 5);
+    }, N);
+    lumberjack::builtin_flush();
+
+    print_result(mix_naive);
+    print_result(mix_lj);
+    print_result(mix_lj_opt);
+    print_comparison(mix_naive, mix_lj);
+    print_comparison(mix_naive, mix_lj_opt);
+    printf("\n");
+
+    // =================================================================
+    // TEST 7: Enabled spans
+    // =================================================================
+    printf("--- Test 7: Enabled Span Overhead ---\n");
+    lumberjack::set_level(lumberjack::LOG_LEVEL_DEBUG);
+    lumberjack::builtin_set_buffered(true, 16384);
+    lumberjack::builtin_set_timestamp_cache_ms(10);
+
+    auto span_en = benchmark("Lumberjack Span (enabled, buf+cache)", [&]() {
+        LOG_SPAN(lumberjack::LOG_LEVEL_DEBUG, "bench_span");
+    }, N);
+    lumberjack::builtin_flush();
+
+    print_result(span_en);
+    printf("\n");
+
+    // =================================================================
     fclose(devnull);
-    
-    printf("=== Summary ===\n");
-    printf("Lumberjack's branchless design shows the most benefit when:\n");
-    printf("1. Log levels are frequently disabled (most common in production)\n");
-    printf("2. Mixed workloads with varying log levels\n");
-    printf("3. Scenarios where branch prediction is less effective\n\n");
-    printf("The overhead difference is typically 1-3ns per call for disabled logs,\n");
-    printf("which adds up significantly in performance-critical code paths.\n");
-    
+
+    printf("=============================================================\n");
+    printf("  Summary\n");
+    printf("=============================================================\n");
+    printf("  Disabled path:  Function pointer noop — near zero cost\n");
+    printf("  Disabled spans: Clock noop eliminates steady_clock reads\n");
+    printf("  Buffered mode:  Eliminates per-call fflush (biggest win)\n");
+    printf("  Cached TS:      Amortizes localtime/strftime cost\n");
+    printf("  All optimizations stack and are runtime-switchable.\n");
+
     return 0;
 }

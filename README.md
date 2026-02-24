@@ -7,6 +7,9 @@ A high-performance, branchless C++17 logging library designed for performance-cr
 - **Branchless Dispatch**: Function pointer arrays eliminate branching overhead at call sites
 - **Runtime Log Levels**: Change verbosity on the fly without recompiling
 - **Pluggable Backends**: Switch logging destinations at runtime
+- **Buffered Writes**: Optional write buffering eliminates per-call fflush overhead
+- **Cached Timestamps**: Amortizes localtime/strftime cost across rapid log calls
+- **Branchless Spans**: Disabled spans skip clock reads via function pointer dispatch
 - **Zero Dependencies**: Built-in backend uses only C++ standard library
 - **RAII Span Timing**: Automatic performance measurement with minimal code
 - **Thread-Safe**: Built-in backend includes mutex protection for concurrent logging
@@ -195,27 +198,51 @@ When logging is disabled for a level, the function pointer points to a no-op tha
 **Overhead when disabled**: ~1-2 CPU cycles (function pointer call + immediate return)  
 **Runtime checks in hot path**: Zero - all function pointers guaranteed valid by contract
 
+### Built-in Backend Optimizations
+
+The built-in backend supports two optional optimizations that can be enabled at runtime:
+
+```cpp
+// Buffered writes — accumulate log lines in memory, flush when full or on demand
+lumberjack::builtin_set_buffered(true, 8192);  // 8 KB buffer
+
+// Cached timestamps — reuse formatted timestamp string within a time window
+lumberjack::builtin_set_timestamp_cache_ms(10); // refresh every 10 ms
+
+// Manual flush when needed (also flushes on shutdown and output change)
+lumberjack::builtin_flush();
+```
+
+Both optimizations are runtime-switchable and stack together.
+
 ### Benchmark Results
 
-Performance comparison against traditional branching logger with equivalent features (timestamps, mutex, formatting, flushing). 1,000,000 iterations on macOS:
+Performance comparison against a naive branching logger with equivalent base features (timestamps, mutex, formatting, flushing). 1,000,000 iterations on macOS:
 
-| Scenario | Empty (no-op) | Lumberjack | Branching | Speedup |
-|----------|---------------|------------|-----------|---------|
-| Single disabled call | 15.7 ns | 14.6 ns | 15.0 ns | ~same |
-| Single enabled call | - | 837 ns | 824 ns | ~same |
-| Mixed workload (3 enabled + 2 disabled) | - | 2,456 ns | 2,429 ns | ~same |
-| Tight loop (100 disabled calls) | 49.9 ns | 82.0 ns | 167.2 ns | 2.04x faster |
-| Tight loop mixed (60 disabled + 40 enabled) | - | 31,982 ns | 31,510 ns | ~same |
-| Tight loop (100 enabled calls) | - | 79,380 ns | 78,650 ns | ~same |
+**Disabled path (production hot path)**
+
+| Scenario | Naive | Lumberjack | Speedup |
+|----------|-------|------------|---------|
+| Single disabled call | 12.1 ns | 12.1 ns | ~same (both near zero) |
+| Disabled span | - | 1.3 ns overhead | clock noop |
+| Tight loop (100 disabled) | 103 ns | 76 ns | 1.35x faster |
+
+**Enabled path**
+
+| Scenario | Naive | LJ Unbuffered | LJ Buf+Cache | Best Speedup |
+|----------|-------|---------------|--------------|--------------|
+| Single enabled call | 801 ns | 849 ns | 141 ns | 5.68x faster |
+| 100 enabled calls | 77,396 ns | 81,798 ns | 11,479 ns | 6.74x faster |
+| Mixed (3 en + 2 dis) | 2,356 ns | 2,466 ns | 365 ns | 6.45x faster |
+| Enabled span | - | - | 173 ns | - |
 
 **Key Insights:**
 
-The branchless design shines in tight loops with disabled logging - the most common pattern in performance-critical code:
-- **Lumberjack overhead**: 32.1 ns for 100 calls = **0.32 ns per disabled log** (1.64x cost of compiled-out code)
-- **Branching overhead**: 117.4 ns for 100 calls = **1.17 ns per disabled log** (3.35x cost of compiled-out code)
-- **Result**: 2.04x faster and much closer to zero-cost
-
-When logs are enabled, I/O dominates (~800 ns per log) and dispatch method doesn't matter. The branchless advantage appears specifically where it's needed: hot paths with disabled debug logging.
+- Disabled logs are near zero-cost. The branchless design wins in tight loops (1.35x) by avoiding branch overhead.
+- Disabled spans cost only 1.3 ns thanks to clock function pointer dispatch (no `steady_clock::now()` calls).
+- Unbuffered Lumberjack performs ~same as the naive logger (~0.95x) since I/O dominates.
+- Buffered writes + cached timestamps deliver a 5.7-6.7x speedup by eliminating per-call `fflush()` and amortizing `localtime`/`strftime` cost.
+- All optimizations are runtime-switchable — no recompilation needed.
 
 Run the benchmark yourself:
 ```bash
